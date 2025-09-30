@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(/C:\\SATHYA\\CHAINAIM3003\\mcp-servers\\altry\\atry2\\atitans1/**)",
+      "Read(/C:\\SATHYA\\CHAINAIM3003\\mcp-servers\\altry\\atry2\\atitans1\\projects\\atitans1-contracts/**)",
+      "Read(/C:\\SATHYA\\CHAINAIM3003\\mcp-servers\\altry\\atry2\\atitans1\\projects\\atitans1-frontend/**)",
+      "Read(/C:\\SATHYA\\CHAINAIM3003\\mcp-servers\\altry\\atry2\\atitans1\\projects\\atitans1-contracts\\smart_contracts\\negotiable_bl/**)",
+      "Read(/C:\\SATHYA\\CHAINAIM3003\\mcp-servers\\altry\\atry2\\atitans1\\projects\\atitans1-contracts\\smart_contracts\\negotiable_bl/**)",
+      "Read(/C:\\SATHYA\\CHAINAIM3003\\mcp-servers\\altry\\atry2\\atitans1\\projects\\atitans1-contracts\\smart_contracts\\artifacts/**)",
+      "Read(/C:\\SATHYA\\CHAINAIM3003\\mcp-servers\\altry\\atry2\\atitans1\\projects\\atitans1-frontend/**)",
+      "Read(/C:\\SATHYA\\CHAINAIM3003\\mcp-servers\\altry\\atry2\\atitans1\\projects\\atitans1-contracts/**)",
+      "Read(/C:\\SATHYA\\CHAINAIM3003\\mcp-servers\\altry\\atry2\\atitans1\\projects\\atitans1-contracts/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
