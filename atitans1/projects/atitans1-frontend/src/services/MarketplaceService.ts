@@ -6,6 +6,8 @@
 import { AlgorandClient } from '@algorandfoundation/algokit-utils'
 import { TradeInstrumentRegistryClient } from '../contracts/TradeInstrumentRegistryClient'
 import { AtomicMarketplaceV3Client } from '../contracts/AtomicMarketplaceV3Client'
+import algosdk from 'algosdk'
+import { getErrorMessage } from '../utils/errorHandling'
 import {
   TradeInstrument,
   InstrumentListing,
@@ -19,11 +21,16 @@ import {
 } from '../types/v3-contract-types'
 
 export class MarketplaceService {
+  private signer: (txns: algosdk.Transaction[], indexesToSign?: number[]) => Promise<(Uint8Array | null)[]>;
+  
   constructor(
     private algorand: AlgorandClient,
     private registryClient: TradeInstrumentRegistryClient,
-    private marketplaceClient: AtomicMarketplaceV3Client
-  ) {}
+    private marketplaceClient: AtomicMarketplaceV3Client,
+    signer: (txns: algosdk.Transaction[], indexesToSign?: number[]) => Promise<(Uint8Array | null)[]>
+  ) {
+    this.signer = signer;
+  }
 
   /**
    * List instrument for sale on marketplace
@@ -37,12 +44,21 @@ export class MarketplaceService {
       const listingType = 1 // Fixed price
 
       // Call marketplace contract to list instrument
+      // Handle both bigint and number types for prices
+      const priceAlgo = typeof request.priceAlgo === 'bigint' 
+        ? request.priceAlgo 
+        : BigInt(Math.floor((Number(request.priceAlgo) || 0) * 1e6));
+      const priceUSDC = typeof request.priceUSDC === 'bigint'
+        ? request.priceUSDC
+        : BigInt(Math.floor((Number(request.priceUSDC) || 0) * 1e6));
+      
       const result = await this.marketplaceClient.listInstrument({
         instrumentId: request.instrumentAssetId,
-        askPriceAlgo: request.priceAlgo || 0n,
-        askPriceUSDC: request.priceUSDC || 0n,
+        askPriceAlgo: priceAlgo,
+        askPriceUSDC: priceUSDC,
         validityPeriod: BigInt(validityPeriod),
-        listingType: BigInt(listingType)
+        listingType: BigInt(listingType),
+        signer: this.signer
       })
 
       return {
@@ -50,8 +66,8 @@ export class MarketplaceService {
         txnId: result.txnId || ''
       }
     } catch (error) {
-      console.error('Failed to list instrument:', error)
-      throw new Error(`Failed to list instrument: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      console.error('Failed to list instrument:', getErrorMessage(error))
+      throw new Error(`Failed to list instrument: ${getErrorMessage(error)}`)
     }
   }
 
@@ -60,18 +76,21 @@ export class MarketplaceService {
    */
   async purchaseWithAlgo(request: PurchaseWithAlgoRequest): Promise<PurchaseResponse> {
     try {
-      // Create payment transaction
-      const paymentTxn = await this.algorand.transactions.payment({
+      // Create payment transaction using algosdk directly
+      const suggestedParams = await this.algorand.client.algod.getTransactionParams().do()
+      const paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
         sender: request.buyerAddress,
         receiver: this.marketplaceClient.appAddress,
-        amount: request.paymentAmount,
-        note: `Purchase listing ${request.listingId}`
+        amount: Number(request.paymentAmount),
+        note: new Uint8Array(Buffer.from(`Purchase listing ${request.listingId}`)),
+        suggestedParams
       })
 
       // Call marketplace contract to purchase
       const result = await this.marketplaceClient.purchaseWithAlgo({
         listingId: request.listingId,
-        payment: paymentTxn
+        payment: paymentTxn,
+        signer: this.signer
       })
 
       // Get listing details to return instrument asset ID
@@ -83,8 +102,8 @@ export class MarketplaceService {
         instrumentAssetId: listing.instrumentId
       }
     } catch (error) {
-      console.error('Failed to purchase with ALGO:', error)
-      throw new Error(`Failed to purchase with ALGO: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      console.error('Failed to purchase with ALGO:', getErrorMessage(error))
+      throw new Error(`Failed to purchase with ALGO: ${getErrorMessage(error)}`)
     }
   }
 
@@ -96,19 +115,22 @@ export class MarketplaceService {
       // Get USDC asset ID from config
       const usdcAssetId = 31566704 // This should come from config
 
-      // Create USDC transfer transaction
-      const usdcTransferTxn = await this.algorand.transactions.assetTransfer({
+      // Create USDC transfer transaction using algosdk directly
+      const suggestedParams = await this.algorand.client.algod.getTransactionParams().do()
+      const usdcTransferTxn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
         sender: request.buyerAddress,
         receiver: this.marketplaceClient.appAddress,
-        assetId: usdcAssetId,
-        amount: request.paymentAmount,
-        note: `Purchase listing ${request.listingId} with USDC`
+        assetIndex: usdcAssetId,
+        amount: Number(request.paymentAmount),
+        note: new Uint8Array(Buffer.from(`Purchase listing ${request.listingId} with USDC`)),
+        suggestedParams
       })
 
       // Call marketplace contract to purchase
       const result = await this.marketplaceClient.purchaseWithUSDC({
         listingId: request.listingId,
-        usdcTransfer: usdcTransferTxn
+        usdcTransfer: usdcTransferTxn,
+        signer: this.signer
       })
 
       // Get listing details to return instrument asset ID
@@ -120,8 +142,8 @@ export class MarketplaceService {
         instrumentAssetId: listing.instrumentId
       }
     } catch (error) {
-      console.error('Failed to purchase with USDC:', error)
-      throw new Error(`Failed to purchase with USDC: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      console.error('Failed to purchase with USDC:', getErrorMessage(error))
+      throw new Error(`Failed to purchase with USDC: ${getErrorMessage(error)}`)
     }
   }
 
@@ -141,8 +163,8 @@ export class MarketplaceService {
       
       return []
     } catch (error) {
-      console.error('Failed to get marketplace listings:', error)
-      throw new Error(`Failed to get marketplace listings: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      console.error('Failed to get marketplace listings:', getErrorMessage(error))
+      throw new Error(`Failed to get marketplace listings: ${getErrorMessage(error)}`)
     }
   }
 
@@ -155,8 +177,8 @@ export class MarketplaceService {
       // Would query marketplace contract for recent sales
       return []
     } catch (error) {
-      console.error('Failed to get recent sales:', error)
-      throw new Error(`Failed to get recent sales: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      console.error('Failed to get recent sales:', getErrorMessage(error))
+      throw new Error(`Failed to get recent sales: ${getErrorMessage(error)}`)
     }
   }
 
@@ -184,8 +206,8 @@ export class MarketplaceService {
         marketplaceFee: result.marketplaceFee || 0n
       }
     } catch (error) {
-      console.error('Failed to get listing:', error)
-      throw new Error(`Failed to get listing: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      console.error('Failed to get listing:', getErrorMessage(error))
+      throw new Error(`Failed to get listing: ${getErrorMessage(error)}`)
     }
   }
 

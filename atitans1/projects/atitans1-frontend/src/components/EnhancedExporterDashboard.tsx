@@ -5,11 +5,13 @@
  * Integrates with V3 contracts and wallet role switching
  */
 import React, { useState, useEffect } from 'react'
-import { useWallet } from '@txnlab/use-wallet-react'
+import { useWallet } from '../hooks/useWalletWrapper'
 import { useApplicationState, useRoleSwitcher } from '../contexts/ApplicationContext'
 import { ADDRESSES, getRoleByAddress, formatAddress } from '../services/roleMappingService'
 import { realAPI, BLWithTransactions, TokenizedBLWithTransactions, MarketplaceListing } from '../services/realAPI'
 import { WalletRoleStatusIndicator } from './WalletRoleSwitcher'
+import { PendingAssetsOptIn } from './PendingAssetsOptIn'
+import { boxStorageService } from '../services/boxStorage'
 
 interface RWAAsset {
   id: string
@@ -44,11 +46,13 @@ interface RWAAsset {
 export function EnhancedExporterDashboard() {
   console.log('🎯 EnhancedExporterDashboard component rendered at:', new Date().toISOString())
   
-  const { activeAddress, connect, disconnect, providers } = useWallet()
+  const { activeAddress, connect, disconnect, providers, signTransactions } = useWallet()
   const { activeRole, isCurrentlyExporter, availableRoles } = useApplicationState()
   const { switchToAddress } = useRoleSwitcher()
   const [rwaAssets, setRWAAssets] = useState<RWAAsset[]>([])
+  const [pendingAssets, setPendingAssets] = useState<any[]>([]) // NEW: Pending assets awaiting opt-in
   const [loading, setLoading] = useState(true)
+  const [optingIn, setOptingIn] = useState<number | null>(null) // Track which asset is being opted into
   const [selectedAction, setSelectedAction] = useState<{
     asset: RWAAsset
     action: 'SELL' | 'FRACTIONAL'
@@ -77,184 +81,107 @@ export function EnhancedExporterDashboard() {
       setLoading(true)
       console.log('🔍 Loading RWA assets for exporter:', activeAddress)
       
-      // Get ALL Bills of Lading first and debug them
-      const allBLs = await realAPI.getBillsOfLading()
-      console.log('📋 Total BLs found:', allBLs.length)
+      // 📦 STEP 1: Load BLs from Box Storage
+      console.log('📦 Loading BLs from box storage...')
+      const allBLs = await boxStorageService.listAllBLs()
+      console.log(`✅ Loaded ${allBLs.length} BLs from box storage`)
       
       // DEBUG: Log all BLs to see their structure
-      console.log('🔍 ALL BLs DEBUG:', allBLs.map((bl, index) => ({
+      console.log('🔍 ALL BLs from Box Storage:', allBLs.map((bl, index) => ({
         index: index + 1,
         ref: bl.transportDocumentReference,
-        createdByCarrier: bl.createdByCarrier,
-        assignedToExporter: bl.createdByCarrier?.assignedToExporter,
-        currentHolder: bl.currentHolder,
-        status: bl.status,
-        hasRwaData: !!bl.rwaAssetData,
-        hasTokenization: !!bl.tokenizationData
+        assetId: bl.rwaTokenization?.assetId,
+        cargoDesc: bl.cargoDescription,
+        originPort: bl.originPort,
+        destPort: bl.destinationPort,
       })))
       
-      // Filter BLs that are assigned to this exporter address
-      let exporterBLs = allBLs.filter(bl => {
-        // Check if this BL is assigned to the current exporter
-        const assignedToExporter = bl.createdByCarrier?.assignedToExporter === activeAddress
-        const isOwner = bl.currentHolder === activeAddress
+      // 📊 STEP 2: Filter BLs owned by this exporter
+      const ownedBLs = allBLs.filter(bl => {
+        const hasAsset = bl.rwaTokenization?.assetId !== undefined;
+        const isOwned = bl.currentHolder === activeAddress;
         
-        console.log(`🔍 Checking BL ${bl.transportDocumentReference}:`, {
-          assignedToExporter: bl.createdByCarrier?.assignedToExporter,
-          currentExporterAddress: activeAddress,
-          isAssignedMatch: assignedToExporter,
-          isOwner: bl.currentHolder,
-          isOwnerMatch: isOwner,
-          finalMatch: assignedToExporter || isOwner
-        })
+        console.log(`Checking BL ${bl.transportDocumentReference} for ownership:`, {
+          hasAsset,
+          assetId: bl.rwaTokenization?.assetId,
+          currentHolder: bl.currentHolder,
+          activeAddress,
+          isOwned,
+          status: bl.status
+        });
         
-        return assignedToExporter || isOwner
-      })
+        // Only include if has asset AND is owned by this exporter
+        return hasAsset && isOwned;
+      });
       
-      console.log('📋 Exporter BLs found:', exporterBLs.length)
-      console.log('📊 Exporter BL details:', exporterBLs.map(bl => ({
-        ref: bl.transportDocumentReference,
-        assignedTo: bl.createdByCarrier?.assignedToExporter,
-        assetId: bl.tokenizationData?.assetId,
-        status: bl.status
-      })))
+      console.log(`✅ Found ${ownedBLs.length} BLs with assets`)
       
-      // DEBUG: If no exporterBLs found, let's also check with a more flexible approach
-      if (exporterBLs.length === 0) {
-        console.log('⚠️ No BLs found with exact match. Trying flexible matching...')
+      // 📋 STEP 3: Filter pending assets (assigned but not yet owned)
+      const pending = allBLs.filter(bl => {
+        const assigned = bl.createdByCarrier?.assignedToExporter === activeAddress;
+        const notOwned = bl.currentHolder !== activeAddress;
+        const hasAsset = bl.rwaTokenization?.assetId !== undefined;
         
-        // Try matching with partial address or different formats
-        const flexibleMatches = allBLs.filter(bl => {
-          const assignedTo = bl.createdByCarrier?.assignedToExporter
-          const currentHolder = bl.currentHolder
-          
-          // Try different matching approaches
-          const partialMatch = assignedTo && activeAddress && (
-            assignedTo.includes(activeAddress.slice(-8)) || // Match last 8 chars
-            activeAddress.includes(assignedTo.slice(-8)) || // Match in reverse
-            assignedTo.toLowerCase() === activeAddress.toLowerCase() // Case insensitive
-          )
-          
-          const holderMatch = currentHolder && activeAddress && (
-            currentHolder.includes(activeAddress.slice(-8)) ||
-            activeAddress.includes(currentHolder.slice(-8)) ||
-            currentHolder.toLowerCase() === activeAddress.toLowerCase()
-          )
-          
-          if (partialMatch || holderMatch) {
-            console.log(`🎯 Flexible match found:`, {
-              blRef: bl.transportDocumentReference,
-              assignedTo,
-              currentHolder,
-              partialMatch,
-              holderMatch
-            })
-          }
-          
-          return partialMatch || holderMatch
-        })
+        console.log(`Checking BL ${bl.transportDocumentReference} for pending:`, {
+          assigned,
+          assignedTo: bl.createdByCarrier?.assignedToExporter,
+          currentHolder: bl.currentHolder,
+          notOwned,
+          hasAsset,
+          assetId: bl.rwaTokenization?.assetId,
+          isPending: assigned && notOwned && hasAsset
+        });
         
-        console.log('🔍 Flexible matches found:', flexibleMatches.length)
-        
-        if (flexibleMatches.length > 0) {
-          // Use flexible matches if exact matches not found
-          exporterBLs = flexibleMatches
-        }
-      }
+        return assigned && notOwned && hasAsset;
+      });
       
-      // Get tokenized BLs for this exporter
-      const tokenizedBLs = await realAPI.getTokenizedBLsByExporter(activeAddress)
-      console.log('💎 Found Tokenized BLs:', tokenizedBLs.length)
+      console.log(`⏳ Found ${pending.length} pending assets (awaiting opt-in)`);
+      setPendingAssets(pending);
       
-      // Convert to RWA format
-      const rwaAssets: RWAAsset[] = []
-      
-      // Add regular BLs as RWA assets
-      exporterBLs.forEach((bl, index) => {
-        console.log(`🔍 Processing Exporter BL ${index + 1}:`, {
-          ref: bl.transportDocumentReference,
-          hasRwaData: !!bl.rwaAssetData,
-          hasTokenization: !!bl.tokenizationData,
-          assetId: bl.tokenizationData?.assetId,
-          createdBy: bl.createdByCarrier?.carrierAddress,
-          assignedTo: bl.createdByCarrier?.assignedToExporter
-        })
+      // 🔄 STEP 4: Convert BLs to RWAAsset format
+      const rwaAssets: RWAAsset[] = ownedBLs.map((bl) => {
+        const assetId = bl.rwaTokenization?.assetId || 0
         
-        const assetId = bl.tokenizationData?.assetId || Math.floor(Math.random() * 900000) + 100000
-        
-        rwaAssets.push({
+        return {
           id: bl.transportDocumentReference,
           instrumentId: BigInt(assetId),
           assetId: assetId,
           blReference: bl.transportDocumentReference,
-          cargoDescription: bl.consignmentItems?.[0]?.descriptionOfGoods?.[0] || bl.cargoDescription || 'Trade Cargo',
-          cargoValue: bl.declaredValue?.amount || bl.cargoValue || 100000,
-          currency: bl.declaredValue?.currency || bl.currency || 'USD',
-          status: 'ACTIVE',
-          createdAt: bl.issuedDate || bl.createdAt || new Date().toISOString(),
-          maturityDate: bl.rwaTokenization?.paymentTerms ? 
-            new Date(Date.now() + (bl.rwaTokenization.paymentTerms * 24 * 60 * 60 * 1000)).toISOString() :
-            new Date(Date.now() + (90 * 24 * 60 * 60 * 1000)).toISOString(),
-          originPort: bl.transports?.portOfLoading?.portName || bl.originPort || 'Origin Port',
-          destinationPort: bl.transports?.portOfDischarge?.portName || bl.destinationPort || 'Destination Port',
-          vesselName: bl.transports?.vesselVoyages?.[0]?.vesselName || bl.vesselName || 'Vessel',
-          riskScore: bl.rwaTokenization?.riskRating === 'LOW' ? 800 : bl.rwaTokenization?.riskRating === 'MEDIUM' ? 650 : 500,
-          txnId: bl.createdByCarrier?.creationTxId || bl.txnId || '',
-          explorerUrl: bl.createdByCarrier?.explorerUrl || bl.explorerUrl || '',
+          cargoDescription: bl.cargoDescription || 'N/A',
+          cargoValue: bl.cargoValue || bl.declaredValue?.amount || 0,
+          currency: bl.currency || bl.declaredValue?.currency || 'USD',
+          status: 'ACTIVE' as const,
+          createdAt: bl.shippedOnBoardDate || new Date().toISOString(),
+          maturityDate: bl.estimatedArrival || '',
+          originPort: bl.originPort || bl.transports?.portOfLoading?.portName || 'Unknown',
+          destinationPort: bl.destinationPort || bl.transports?.portOfDischarge?.portName || 'Unknown',
+          vesselName: bl.vesselName || bl.transports?.vesselVoyages?.[0]?.vesselName || 'Unknown',
+          riskScore: 75, // Default risk score
+          txnId: '', // We don't have this in the basic type
+          explorerUrl: `https://testnet.explorer.perawallet.app/asset/${assetId}`,
           isListed: false,
-          isFractional: false
-        })
-      })
-      
-      // Add tokenized BLs
-      tokenizedBLs.forEach((tbl, index) => {
-        console.log(`🔍 Processing Tokenized BL ${index + 1}:`, {
-          ref: tbl.blReference,
-          assetId: tbl.assetId,
-          totalShares: tbl.totalShares
-        })
-        
-        // Check if not already added as regular BL
-        const existingAsset = rwaAssets.find(asset => asset.blReference === tbl.blReference)
-        if (!existingAsset) {
-          rwaAssets.push({
-            id: tbl.blReference,
-            instrumentId: BigInt(tbl.assetId || Math.floor(Math.random() * 900000) + 100000),
-            assetId: tbl.assetId || Math.floor(Math.random() * 900000) + 100000,
-            blReference: tbl.blReference,
-            cargoDescription: tbl.cargoDescription || 'Tokenized Trade Cargo',
-            cargoValue: tbl.cargoValue || 100000,
-            currency: tbl.currency || 'USD',
-            status: 'FRACTIONAL',
-            createdAt: tbl.createdAt || new Date().toISOString(),
-            maturityDate: new Date(Date.now() + (90 * 24 * 60 * 60 * 1000)).toISOString(),
-            originPort: tbl.originPort || 'Origin Port',
-            destinationPort: tbl.destinationPort || 'Destination Port',
-            vesselName: tbl.vesselName || 'Vessel',
-            riskScore: 750,
-            txnId: tbl.tokenCreationTx || '',
-            explorerUrl: '',
-            isListed: false,
-            isFractional: true,
-            totalShares: tbl.totalShares,
-            availableShares: tbl.availableShares,
-            sharePrice: tbl.pricePerShare,
-            investors: tbl.investments?.length || 0,
-            fundingProgress: tbl.totalShares ? ((tbl.totalShares - (tbl.availableShares || 0)) / tbl.totalShares) * 100 : 0
-          })
+          isFractional: false,
         }
       })
       
-      console.log('✅ Final RWA Assets for exporter:', rwaAssets.length)
-      console.log('📊 Assets:', rwaAssets)
+      console.log(`✅ Loaded ${rwaAssets.length} RWA assets for exporter`)
       setRWAAssets(rwaAssets)
       
+      // 📊 Show box storage stats
+      const stats = await boxStorageService.getBoxStats()
+      console.log('📦 Box Storage Stats:', {
+        totalBoxes: stats.totalBoxes,
+        totalSize: `${stats.totalSize} bytes`,
+        estimatedCost: `${stats.estimatedCost} microAlgos (${stats.estimatedCost / 1_000_000} ALGO)`,
+      })
+      
     } catch (error) {
-      console.error('❌ Error loading exporter RWAs:', error)
+      console.error('❌ Error loading RWA assets:', error)
     } finally {
       setLoading(false)
     }
   }
+
 
   const handleListForSale = async (asset: RWAAsset, saleData: {
     priceAlgo?: number
@@ -426,10 +353,10 @@ export function EnhancedExporterDashboard() {
 
   const handleOpenLuteWallet = async () => {
     try {
-      console.log('Available providers:', providers?.map(p => p.metadata.name))
+      console.log('Available providers:', providers?.map((p: any) => p.metadata.name))
       
       // Find Lute wallet provider with more comprehensive detection
-      const luteProvider = providers?.find(p => {
+      const luteProvider = providers?.find((p: any) => {
         const name = p.metadata.name.toLowerCase()
         return name.includes('lute') || 
                name.includes('algorand') ||
@@ -442,7 +369,7 @@ export function EnhancedExporterDashboard() {
       
       if (!luteProvider) {
         // Show available providers for debugging
-        const availableProviders = providers?.map(p => p.metadata.name).join(', ') || 'None'
+        const availableProviders = providers?.map((p: any) => p.metadata.name).join(', ') || 'None'
         console.log('Available wallet providers:', availableProviders)
         
         // Try to connect to any available provider to open wallet interface
@@ -489,7 +416,8 @@ export function EnhancedExporterDashboard() {
       
     } catch (error) {
       console.error('Failed to open wallet:', error)
-      alert(`Failed to open wallet: ${error.message}. Please try opening Lute wallet manually and connecting an account.`)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to open wallet: ${errorMessage}. Please try opening Lute wallet manually and connecting an account.`)
     }
   }
 
@@ -614,7 +542,8 @@ export function EnhancedExporterDashboard() {
                       alert(`First BL reference: ${allBLs[0]?.transportDocumentReference || 'Unknown'}`)
                     }
                   } catch (error) {
-                    alert(`Error: ${error.message}`)
+                    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                    alert(`Error: ${errorMessage}`)
                     console.error('❌ Error fetching BLs:', error)
                   }
                 }}
@@ -679,8 +608,14 @@ export function EnhancedExporterDashboard() {
               You can now manage your RWA assets, list them for sale, or open them for fractional investment.
             </div>
           </div>
-        )}
+        )}  
       </div>
+
+      {/* NEW: Pending Assets Section */}
+      <PendingAssetsOptIn 
+        pendingAssets={pendingAssets}
+        onOptInSuccess={loadExporterRWAs}
+      />
 
       {/* RWA Assets Grid */}
       <div className="bg-white shadow rounded-lg">

@@ -3,7 +3,7 @@ export interface TransactionInfo {
   confirmedRound: number;
   explorerUrl: string;
   timestamp: string;
-  type: 'BL_CREATION' | 'TOKENIZATION' | 'INVESTMENT' | 'TRANSFER' | 'SETTLEMENT' | 'ASA_CREATION';
+  type: 'BL_CREATION' | 'TOKENIZATION' | 'INVESTMENT' | 'TRANSFER' | 'SETTLEMENT' | 'ASA_CREATION' | 'ENHANCED_BL_CREATION';
   description: string;
 }
 
@@ -102,6 +102,10 @@ export interface BillOfLading {
         value: number;
         unit: string;
       };
+      cargoNetWeight?: {
+        value: number;
+        unit: string;
+      };
       outerPackaging: {
         numberOfPackages: number;
         packageCode: string;
@@ -125,6 +129,8 @@ export interface BillOfLading {
     paymentTerms: number;
     riskRating: string;
     marketplaceEligible: boolean;
+    enabled?: boolean;
+    assetId?: number;
   };
   charges: Array<{
     chargeName: string;
@@ -136,6 +142,18 @@ export interface BillOfLading {
     quantity: number;
   }>;
   invoicePayableAt: string;
+  // Convenience properties (flattened from nested structures)
+  cargoDescription?: string;
+  cargoValue?: number;
+  currency?: string;
+  originPort?: string;
+  destinationPort?: string;
+  vesselName?: string;
+  dcsaVersion?: string;
+  complianceDocuments?: string[];
+  zkProofHash?: string;
+  // Enhanced Algorand box storage (for V3 contracts)
+  algorandBoxStorage?: any;
 }
 
 export interface UserRole {
@@ -162,6 +180,14 @@ export interface TokenizedBL {
   assetId?: number;
   createdAt?: string;
   lastUpdated?: string;
+  // Convenience properties for display
+  cargoDescription?: string;
+  cargoValue?: number;
+  currency?: string;
+  originPort?: string;
+  destinationPort?: string;
+  vesselName?: string;
+  tokenCreationTx?: string;
 }
 
 export interface Investment {

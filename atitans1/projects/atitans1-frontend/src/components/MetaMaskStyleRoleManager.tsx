@@ -2,14 +2,14 @@ import React, { useEffect } from 'react';
 import { useAddressManager } from '../hooks/useAddressManager';
 
 interface MetaMaskStyleRoleManagerProps {
-  currentTab: 'home' | 'exporter' | 'carrier' | 'importer' | 'investor' | 'marketplace' | 'regulator' | 'admin' | 'about';
+  currentTab: 'home' | 'exporter' | 'carrier' | 'importer' | 'financier' | 'marketplace' | 'regulator' | 'admin' | 'about';
   selectedBuyer?: 'BUYER_1' | 'BUYER_2';
   selectedInvestor?: 'INVESTOR_SMALL_1' | 'INVESTOR_SMALL_2' | 'INVESTOR_SMALL_3' | 'INVESTOR_SMALL_4' | 'INVESTOR_SMALL_5' | 'INVESTOR_LARGE_1' | 'INVESTOR_LARGE_2';
   onRoleChange?: (role: string) => void;
 }
 
 // Define which roles are appropriate for each tab with proper typing
-type TabType = 'home' | 'exporter' | 'carrier' | 'importer' | 'investor' | 'marketplace' | 'regulator' | 'admin' | 'about';
+type TabType = 'home' | 'exporter' | 'carrier' | 'importer' | 'financier' | 'marketplace' | 'regulator' | 'admin' | 'about';
 type RoleType = string[];
 
 const TAB_ROLES: Record<TabType, RoleType> = {
@@ -17,7 +17,7 @@ const TAB_ROLES: Record<TabType, RoleType> = {
   exporter: ['EXPORTER'],
   carrier: ['CARRIER'],
   importer: ['BUYER_1', 'BUYER_2'],
-  investor: ['INVESTOR_SMALL_1', 'INVESTOR_SMALL_2', 'INVESTOR_SMALL_3', 'INVESTOR_SMALL_4', 'INVESTOR_SMALL_5', 'INVESTOR_LARGE_1', 'INVESTOR_LARGE_2'],
+  financier: ['INVESTOR_SMALL_1', 'INVESTOR_SMALL_2', 'INVESTOR_SMALL_3', 'INVESTOR_SMALL_4', 'INVESTOR_SMALL_5', 'INVESTOR_LARGE_1', 'INVESTOR_LARGE_2'],
   marketplace: [], // CHANGED: Marketplace accepts any role (preserves current role)
   regulator: ['REGULATOR', 'BANK'],
   admin: [], // Admin can use any role
@@ -43,7 +43,7 @@ export function MetaMaskStyleRoleManager({ currentTab, selectedBuyer, selectedIn
     if (currentTab === 'importer' && selectedBuyer) {
       return selectedBuyer;
     }
-    if (currentTab === 'investor' && selectedInvestor) {
+    if (currentTab === 'financier' && selectedInvestor) {
       return selectedInvestor;
     }
     const tabRoles = TAB_ROLES[currentTab] || [];

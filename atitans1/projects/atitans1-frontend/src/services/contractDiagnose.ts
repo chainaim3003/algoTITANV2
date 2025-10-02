@@ -1,8 +1,10 @@
 import algosdk from 'algosdk';
 import { getAlgodConfigFromViteEnvironment } from '../utils/network/getAlgoClientConfigs';
 import { getAppId } from '../config/appIds';
+import { getGlobalState } from '../utils/algosdkCompat';
+import { getErrorMessage } from '../utils/errorHandling';
 
-export async function diagnoseContract(): Promise<void> {
+export async function diagnoseContract(): Promise<any> {
   const algodConfig = getAlgodConfigFromViteEnvironment();
   const algodClient = new algosdk.Algodv2(
     String(algodConfig.token),
@@ -21,8 +23,9 @@ export async function diagnoseContract(): Promise<void> {
     console.log('Creator:', appInfo.params.creator);
     console.log('Global State:');
     
-    if (appInfo.params['global-state']) {
-      for (const state of appInfo.params['global-state']) {
+    const globalState = getGlobalState(appInfo);
+    if (globalState && Array.isArray(globalState)) {
+      for (const state of globalState) {
         const key = Buffer.from(state.key, 'base64').toString();
         const value = state.value;
         console.log(`  ${key}:`, value);
@@ -32,12 +35,12 @@ export async function diagnoseContract(): Promise<void> {
     console.log('=== YOUR DEPLOYER ACCOUNT ===');
     console.log('Expected Creator: Q5OXWYKCH75UKRJ2UK32SPGHTCOBAAYTNLN74JDP7LW3AI5F6B4LCGPKQI');
     console.log('Contract Creator:', appInfo.params.creator);
-    console.log('Match:', appInfo.params.creator === 'Q5OXWYKCH75UKRJ2UK32SPGHTCOBAAYTNLN74JDP7LW3AI5F6B4LCGPKQI');
+    console.log('Match:', appInfo.params.creator.toString() === 'Q5OXWYKCH75UKRJ2UK32SPGHTCOBAAYTNLN74JDP7LW3AI5F6B4LCGPKQI');
     
     return appInfo;
     
   } catch (error) {
-    console.error('Contract diagnostic failed:', error);
+    console.error('Contract diagnostic failed:', getErrorMessage(error));
     throw error;
   }
 }

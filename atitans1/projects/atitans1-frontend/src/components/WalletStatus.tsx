@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useWallet } from '@txnlab/use-wallet-react';
+import { useWallet } from '../hooks/useWalletWrapper';
 import { getAlgodConfigFromViteEnvironment } from '../utils/network/getAlgoClientConfigs';
 import { useAddressManager } from '../hooks/useAddressManager';
 

@@ -120,7 +120,7 @@ export function RegulatorDashboard() {
             title="All RWAs Under Regulatory Oversight"
             rwaList={allRWAs}
             roleContext="regulator"
-            userAddress={activeAddress}
+            userAddress={activeAddress || undefined}
             loading={loading}
           />
         </section>

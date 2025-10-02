@@ -1,4 +1,5 @@
-import { useWallet, Wallet, WalletId } from '@txnlab/use-wallet-react'
+import { useWallet } from '../hooks/useWalletWrapper'
+import { Wallet, WalletId } from '@txnlab/use-wallet-react'
 import Account from './Account'
 
 interface ConnectWalletInterface {

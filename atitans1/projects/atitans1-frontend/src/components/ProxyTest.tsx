@@ -1,12 +1,25 @@
 import React, { useState } from 'react';
+import { getErrorMessage } from '../utils/errorHandling';
+
+interface TestResult {
+  success: boolean;
+  data?: any;
+  message: string;
+}
+
+interface TestResults {
+  algodProxy?: TestResult;
+  indexerProxy?: TestResult;
+  algosdkProxy?: TestResult;
+}
 
 const ProxyTest = () => {
-  const [testResults, setTestResults] = useState({});
+  const [testResults, setTestResults] = useState<TestResults>({});
   const [isLoading, setIsLoading] = useState(false);
 
   const runProxyTests = async () => {
     setIsLoading(true);
-    const results = {};
+    const results: TestResults = {};
 
     try {
       // Test 1: Proxy algod connection
@@ -34,7 +47,7 @@ const ProxyTest = () => {
       } catch (error) {
         results.algodProxy = {
           success: false,
-          message: `Algod proxy error: ${error.message}`
+          message: `Algod proxy error: ${getErrorMessage(error)}`
         };
       }
 
@@ -62,7 +75,7 @@ const ProxyTest = () => {
       } catch (error) {
         results.indexerProxy = {
           success: false,
-          message: `Indexer proxy error: ${error.message}`
+          message: `Indexer proxy error: ${getErrorMessage(error)}`
         };
       }
 
@@ -78,15 +91,16 @@ const ProxyTest = () => {
         );
 
         const status = await algodClient.status().do();
+        const genesisId = (status as any)['genesis-id'] || (status as any).genesisId || 'unknown';
         results.algosdkProxy = {
           success: true,
           data: status,
-          message: `AlgoSDK through proxy works! Genesis: ${status.genesisId}`
+          message: `AlgoSDK through proxy works! Genesis: ${genesisId}`
         };
       } catch (error) {
         results.algosdkProxy = {
           success: false,
-          message: `AlgoSDK proxy error: ${error.message}`
+          message: `AlgoSDK proxy error: ${getErrorMessage(error)}`
         };
       }
 
@@ -98,7 +112,7 @@ const ProxyTest = () => {
     }
   };
 
-  const TestResult = ({ title, result }) => {
+  const TestResult = ({ title, result }: { title: string; result?: TestResult }) => {
     if (!result) return null;
     
     return (
@@ -153,7 +167,7 @@ const ProxyTest = () => {
           <div className="mt-6 p-4 bg-gray-50 rounded-lg">
             <h3 className="font-semibold mb-2">Status Summary:</h3>
             <div className="text-sm text-gray-700 space-y-1">
-              {Object.values(testResults).every(r => r.success) ? (
+              {Object.values(testResults).every((r: any) => r.success) ? (
                 <p className="text-green-700 font-medium">All proxy connections working! Your RWA creation should now work on LocalNet.</p>
               ) : (
                 <p className="text-red-700 font-medium">Some proxy connections failed. Check LocalNet status and restart dev server.</p>

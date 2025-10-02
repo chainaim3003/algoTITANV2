@@ -248,7 +248,7 @@ export const MarketplacePage: React.FC<MarketplacePageProps> = ({
                           #{sale.instrumentId.toString().slice(-6)}
                         </span>
                         <span className="font-medium">
-                          {sale.currency === Currency.ALGO ? 
+                          {Number(sale.currency) === Currency.ALGO ? 
                             `${(Number(sale.salePrice) / 1_000_000).toFixed(2)} ALGO` :
                             `${(Number(sale.salePrice) / 1_000_000).toFixed(2)} USDC`
                           }

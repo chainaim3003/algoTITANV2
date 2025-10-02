@@ -63,8 +63,10 @@ export const handleRealBLCreation = async (
     const newBL = {
       id: blData.eblReference,
       reference: blData.eblReference,
+      transportDocumentReference: blData.eblReference,
       status: 'ISSUED',
-      assignedToExporter: EXPORTER_ADDRESS,
+      assignedToExporter: EXPORTER_ADDRESS, // Direct field for easier filtering
+      currentHolder: EXPORTER_ADDRESS, // Direct field for current owner
       createdByCarrier: {
         carrierAddress: senderAddress,
         assignedToExporter: EXPORTER_ADDRESS,
@@ -152,16 +154,16 @@ export const handleRealBLCreation = async (
     
     setCreatedBLs(prev => [newBL, ...prev]);
     
-    alert(`eBL created successfully!
-
-Transaction ID: ${result.txId}
-Asset ID: ${result.assetId}
-
-Addresses Used:
-- Exporter: ${EXPORTER_ADDRESS}
-- Carrier: ${senderAddress}
-
-View on TestNet Explorer: ${result.explorerUrl}`);
+    // Return success data instead of showing alert
+    return {
+      success: true,
+      bl: newBL,
+      txId: result.txId,
+      assetId: result.assetId,
+      explorerUrl: result.explorerUrl,
+      exporterAddress: EXPORTER_ADDRESS,
+      carrierAddress: senderAddress
+    };
     
   } catch (error) {
     console.error('Error creating eBL:', error);
@@ -182,13 +184,13 @@ View on TestNet Explorer: ${result.explorerUrl}`);
       }
     });
     
-    alert(`Failed to create eBL: ${errorMessage}
-
-Used addresses:
-- Exporter: ${EXPORTER_ADDRESS}
-- Sender: ${senderAddress}
-
-Please check the browser console for more details.`);
+    // Return error data instead of showing alert
+    return {
+      success: false,
+      error: errorMessage,
+      exporterAddress: EXPORTER_ADDRESS,
+      carrierAddress: senderAddress
+    };
   } finally {
     setIsCreatingBL(false);
   }

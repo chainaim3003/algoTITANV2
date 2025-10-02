@@ -1,6 +1,7 @@
 import algosdk from 'algosdk';
 import { getAlgodConfigFromViteEnvironment } from '../utils/network/getAlgoClientConfigs';
 import { getAppId } from '../config/appIds';
+import { getErrorMessage } from '../utils/errorHandling';
 
 export interface SimpleEBLParams {
   instrumentNumber: string;
@@ -42,8 +43,6 @@ export async function createSimpleEBL(params: SimpleEBLParams): Promise<any> {
       ],
       // No additional accounts to start
       accounts: [],
-      // Higher fee for complex operations
-      fee: 5000,
       suggestedParams,
     });
     
@@ -86,7 +85,6 @@ export async function createSimpleEBL(params: SimpleEBLParams): Promise<any> {
           new TextEncoder().encode(params.destinationPort)
         ],
         accounts: [params.exporterAddress, params.importerAddress],
-        fee: 5000,
         suggestedParams,
       });
       
@@ -110,8 +108,8 @@ export async function createSimpleEBL(params: SimpleEBLParams): Promise<any> {
       
     } catch (error2) {
       console.error('Both method calls failed');
-      console.error('Error 1 (basic):', error);
-      console.error('Error 2 (full):', error2);
+      console.error('Error 1 (basic):', getErrorMessage(error));
+      console.error('Error 2 (full):', getErrorMessage(error2));
       
       throw new Error(`
 Smart contract call failed. This AlgorandTypescript contract might require:
@@ -125,7 +123,7 @@ Solutions to try:
 - Check contract creator: ${appId} on testnet.algoexplorer.io
 - Verify deployed contract methods match your code
 
-Error details: ${error2 instanceof Error ? error2.message : 'Unknown error'}
+Error details: ${getErrorMessage(error2)}
       `);
     }
   }

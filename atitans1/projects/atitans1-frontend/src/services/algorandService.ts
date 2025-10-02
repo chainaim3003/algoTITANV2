@@ -307,7 +307,7 @@ export class AlgorandService {
   }
 
   // Generate REAL explorer URL based on actual network
-  private getExplorerUrl(txId: string): string {
+  protected getExplorerUrl(txId: string): string {
     const algodConfig = getAlgodConfigFromViteEnvironment();
     const network = algodConfig.network;
     
@@ -599,25 +599,6 @@ export class EnhancedAlgorandService extends AlgorandService {
   private generateHash(data: string): string {
     // Simple hash generation for demo - use proper crypto in production
     return `0x${Date.now().toString(16)}${data.length.toString(16)}`;
-  }
-
-  private getExplorerUrl(txId: string): string {
-    const algodConfig = getAlgodConfigFromViteEnvironment();
-    const network = algodConfig.network;
-    
-    switch (network) {
-      case 'mainnet':
-        return `https://allo.info/tx/${txId}`;
-      case 'testnet':
-        return `https://testnet.algoexplorer.io/tx/${txId}`;
-      case 'localnet':
-        // Use proxy for LocalNet indexer
-        return typeof window !== 'undefined' 
-          ? `${window.location.origin}/api/indexer/v2/transactions/${txId}`
-          : `http://localhost:8980/v2/transactions/${txId}`;
-      default:
-        return `https://testnet.algoexplorer.io/tx/${txId}`;
-    }
   }
 }
 

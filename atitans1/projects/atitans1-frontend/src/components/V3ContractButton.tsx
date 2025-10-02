@@ -80,10 +80,13 @@ export function V3ContractCreationButton({
           shipmentTerms: blFormData.incoterms || 'FOB',
           rwaTokenization: {
             enabled: true,
+            canTokenize: true,
             totalShares: 1000,
             sharePrice: blFormData.cargoValue / 1000,
             minInvestment: 50,
             expectedYield: 12.5,
+            paymentTerms: 90,
+            riskRating: 'LOW',
             marketplaceEligible: true
           },
           algorandBoxStorage: {

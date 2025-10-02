@@ -24,15 +24,23 @@ export const V3TradePlatform: React.FC = () => {
 
   // Initialize marketplace service when contracts are ready
   useEffect(() => {
-    if (contracts && !contractsLoading) {
+    if (contracts && !contractsLoading && activeAccount) {
+      // Create a signer function that uses the wallet
+      const signer = async (txns: any[], indexesToSign?: number[]) => {
+        // This should use the wallet's signTransactions method
+        // The actual implementation depends on your wallet setup
+        return [] as (Uint8Array | null)[];
+      };
+      
       const service = new MarketplaceService(
         contracts.algorand,
         contracts.registry,
-        contracts.marketplace
-      )
-      setMarketplaceService(service)
+        contracts.marketplace,
+        signer
+      );
+      setMarketplaceService(service);
     }
-  }, [contracts, contractsLoading])
+  }, [contracts, contractsLoading, activeAccount]);
 
   const handlePageChange = (page: Page) => {
     setCurrentPage(page)
@@ -216,7 +224,7 @@ export const V3TradePlatform: React.FC = () => {
         )}
         
         {currentPage === 'lending' && (
-          <LendingDashboard />
+          <LendingDashboardContainer />
         )}
       </main>
 
@@ -269,8 +277,8 @@ const CarrierDashboard: React.FC = () => {
   )
 }
 
-// Placeholder for Lending Dashboard
-const LendingDashboard: React.FC = () => {
+// Placeholder for Lending Dashboard - Container Component
+const LendingDashboardContainer: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto p-6">
       <div className="mb-8">
@@ -316,7 +324,7 @@ const LendingDashboard: React.FC = () => {
                 <span className="font-medium text-orange-600">60% LTV, 12% APR</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Very High Risk (>700):</span>
+                <span className="text-gray-500">Very High Risk (&gt;700):</span>
                 <span className="font-medium text-red-600">40% LTV, 18% APR</span>
               </div>
             </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useWallet } from '@txnlab/use-wallet-react';
 import { getAlgodConfigFromViteEnvironment } from '../utils/network/getAlgoClientConfigs';
 
@@ -8,22 +8,8 @@ export function EnvironmentAwareWallet() {
   const algoConfig = getAlgodConfigFromViteEnvironment();
   const isLocalNet = algoConfig.network === 'localnet';
 
-  // Auto-connect to Lute on TestNet if available
-  useEffect(() => {
-    if (!isLocalNet && !activeAccount) {
-      const luteWallet = wallets.find(w => w.id === 'lute');
-      if (luteWallet && !luteWallet.isConnected) {
-        // Auto-attempt connection to Lute on TestNet
-        setTimeout(() => {
-          try {
-            luteWallet.connect();
-          } catch (error) {
-            console.log('Lute wallet not ready or user cancelled');
-          }
-        }, 1000);
-      }
-    }
-  }, [isLocalNet, activeAccount, wallets]);
+  // Removed auto-connect logic to prevent duplicate wallet popups
+  // Users should connect manually via SmartWalletButton
 
   if (isLocalNet) {
     return (
@@ -82,7 +68,7 @@ export function EnvironmentAwareWallet() {
       {activeAccount ? (
         <div className="space-y-2">
           <div className="text-sm text-blue-700">
-            ✅ Connected to <strong>{activeAccount.providerId}</strong>
+            ✅ Connected to <strong>{wallets.find(w => w.isConnected)?.metadata?.name || 'Wallet'}</strong>
           </div>
           <div className="text-xs text-blue-600 font-mono">
             {activeAccount.address.substring(0, 12)}...{activeAccount.address.substring(activeAccount.address.length - 8)}
@@ -91,10 +77,10 @@ export function EnvironmentAwareWallet() {
       ) : (
         <div className="space-y-2">
           <div className="text-sm text-blue-700">
-            🔗 Lute Wallet should auto-connect if configured
+            💡 Click "Connect Wallet" below to get started
           </div>
           <div className="text-xs text-blue-600">
-            If not connected, click "Connect Wallet" and select "Lute"
+            Select "Lute" from the available wallets for the best TestNet experience
           </div>
         </div>
       )}

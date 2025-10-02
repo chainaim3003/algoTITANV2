@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useWallet } from '@txnlab/use-wallet-react';
 import { getAlgodConfigFromViteEnvironment, getKmdConfigFromViteEnvironment } from '../utils/network/getAlgoClientConfigs';
 import algosdk from 'algosdk';
+import { getTxId } from '../utils/algosdkCompat';
+import { getErrorMessage } from '../utils/errorHandling';
 
 export interface RoleAccount {
   role: string;
@@ -69,7 +71,8 @@ export function useAddressManager() {
           const mnemonic = algosdk.secretKeyToMnemonic(account.sk);
           
           // Validate that we have proper account data
-          if (!account.addr || typeof account.addr !== 'string') {
+          const addressStr = String(account.addr);
+          if (!addressStr || typeof addressStr !== 'string') {
             throw new Error(`Failed to generate valid address for role ${role}`);
           }
           
@@ -78,14 +81,14 @@ export function useAddressManager() {
           }
           
           generatedAccounts[role] = {
-            address: account.addr,
+            address: addressStr,
             mnemonic: mnemonic
           };
           
-          console.log(`✅ Generated account for ${role}: ${account.addr.substring(0, 8)}...`);
+          console.log(`✅ Generated account for ${role}: ${addressStr.substring(0, 8)}...`);
         } catch (error) {
-          console.error(`❌ Failed to generate account for role ${role}:`, error);
-          throw new Error(`Account generation failed for role ${role}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          console.error(`❌ Failed to generate account for role ${role}:`, getErrorMessage(error));
+          throw new Error(`Account generation failed for role ${role}: ${getErrorMessage(error)}`);
         }
       }
 
@@ -116,7 +119,7 @@ export function useAddressManager() {
       console.log(`🎉 Successfully generated and funded ${Object.keys(generatedAccounts).length} LocalNet accounts!`);
       return generatedAccounts;
     } catch (error) {
-      console.error('❌ Error in generateAllLocalNetAccounts:', error);
+      console.error('❌ Error in generateAllLocalNetAccounts:', getErrorMessage(error));
       throw error;
     }
   };
@@ -125,7 +128,7 @@ export function useAddressManager() {
     try {
       const kmdConfig = getKmdConfigFromViteEnvironment();
       const kmdClient = new algosdk.Kmd(
-        kmdConfig.token,
+        kmdConfig.token as string,
         kmdConfig.server,
         kmdConfig.port.toString()
       );
@@ -146,7 +149,7 @@ export function useAddressManager() {
           importedCount++;
           console.log(`📥 Imported ${role} into KMD wallet`);
         } catch (error) {
-          console.warn(`⚠️ Could not import ${role} into KMD:`, error);
+          console.warn(`⚠️ Could not import ${role} into KMD:`, getErrorMessage(error));
         }
       }
       
@@ -156,7 +159,7 @@ export function useAddressManager() {
       console.log(`✅ Successfully imported ${importedCount}/${Object.keys(accounts).length} accounts into KMD wallet`);
       
     } catch (error) {
-      console.warn('⚠️ Could not connect to KMD for account import:', error);
+      console.warn('⚠️ Could not connect to KMD for account import:', getErrorMessage(error));
       // This is OK - accounts are still generated and funded, just not imported to KMD
     }
   };
@@ -165,7 +168,7 @@ export function useAddressManager() {
     try {
       // Connect to localnet algod according to AlgoKit specs
       const algodClient = new algosdk.Algodv2(
-        algoConfig.token,
+        algoConfig.token as string,
         algoConfig.server,
         algoConfig.port
       );
@@ -181,8 +184,8 @@ export function useAddressManager() {
       for (const [role, account] of Object.entries(accounts)) {
         try {
           const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-            from: dispenserAccount.addr,
-            to: account.address,
+            sender: dispenserAccount.addr,
+            receiver: account.address,
             amount: 100_000_000, // 100 ALGO in microAlgos
             suggestedParams,
             note: new Uint8Array(Buffer.from(`AlgoKit LocalNet funding for ${role}`)),
@@ -190,23 +193,24 @@ export function useAddressManager() {
 
           const signedTxn = txn.signTxn(dispenserAccount.sk);
           const txResult = await algodClient.sendRawTransaction(signedTxn).do();
+          const txId = getTxId(txResult);
           
           // Wait for confirmation (important for LocalNet)
-          const confirmedTxn = await algosdk.waitForConfirmation(algodClient, txResult.txId, 4);
+          await algosdk.waitForConfirmation(algodClient, txId, 4);
           
-          console.log(`💰 Funded ${role} (${account.address.substring(0, 8)}...) with 100 ALGO - Tx: ${txResult.txId}`);
+          console.log(`💰 Funded ${role} (${account.address.substring(0, 8)}...) with 100 ALGO - Tx: ${txId}`);
           fundedCount++;
         } catch (error) {
-          console.warn(`⚠️ Could not fund ${role}:`, error);
+          console.warn(`⚠️ Could not fund ${role}:`, getErrorMessage(error));
           // Continue with other accounts even if one fails
         }
       }
       
       console.log(`✅ Successfully funded ${fundedCount}/${Object.keys(accounts).length} accounts`);
     } catch (error) {
-      console.warn('⚠️ Could not connect to LocalNet for funding:', error);
+      console.warn('⚠️ Could not connect to LocalNet for funding:', getErrorMessage(error));
       // This is OK - accounts are still generated, just not funded
-      throw new Error(`LocalNet funding failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(`LocalNet funding failed: ${getErrorMessage(error)}`);
     }
   };
 
@@ -252,7 +256,7 @@ export function useAddressManager() {
     try {
       return algosdk.mnemonicToSecretKey(mnemonic);
     } catch (error) {
-      console.error('Error getting signing key for role:', error);
+      console.error('Error getting signing key for role:', getErrorMessage(error));
       return null;
     }
   };
@@ -338,7 +342,7 @@ export function useAddressManager() {
       }));
       
     } catch (error) {
-      console.error('Error switching to role:', error);
+      console.error('Error switching to role:', getErrorMessage(error));
     }
   };
 
@@ -347,7 +351,7 @@ export function useAddressManager() {
       // Try to import account into KMD wallet
       const kmdConfig = getKmdConfigFromViteEnvironment();
       const kmdClient = new algosdk.Kmd(
-        kmdConfig.token,
+        kmdConfig.token as string,
         kmdConfig.server,
         kmdConfig.port.toString()
       );
@@ -369,7 +373,7 @@ export function useAddressManager() {
       
     } catch (error) {
       // KMD import failed - this is OK, user can still manually import
-      console.warn(`Could not import ${role} into KMD:`, error);
+      console.warn(`Could not import ${role} into KMD:`, getErrorMessage(error));
     }
   };
 
@@ -385,7 +389,7 @@ export function useAddressManager() {
       const mnemonic = algosdk.secretKeyToMnemonic(account.sk);
       
       // Store the new account
-      localStorage.setItem(`role_address_${role}`, account.addr);
+      localStorage.setItem(`role_address_${role}`, account.addr.toString());
       localStorage.setItem(`role_mnemonic_${role}`, mnemonic);
       localStorage.setItem(`localnet_role_${account.addr}`, role);
       localStorage.setItem(`localnet_nickname_${account.addr}`, ROLE_NICKNAMES[role]);
@@ -393,13 +397,14 @@ export function useAddressManager() {
       // Update state
       setRoleAddresses(prev => ({
         ...prev,
-        [role]: account.addr
+        [role]: account.addr.toString()
       }));
       
       console.log(`Generated new address for ${role}: ${account.addr}`);
-      return account.addr;
+      return account.addr.toString();
     } catch (error) {
-      console.error('Error generating new address for role:', error);
+      console.error('Error generating new address for role:', getErrorMessage(error));
+      return undefined;
     }
   };
 
@@ -439,7 +444,7 @@ export function useAddressManager() {
       
       console.log(`Assigned current address ${activeAddress} to role: ${role}`);
     } catch (error) {
-      console.error('Error assigning current address to role:', error);
+      console.error('Error assigning current address to role:', getErrorMessage(error));
     }
   };
 

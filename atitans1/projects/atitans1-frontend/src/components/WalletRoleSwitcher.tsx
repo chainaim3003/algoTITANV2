@@ -5,7 +5,7 @@
  * Opens Lute wallet when switching roles and handles real wallet connections
  */
 import React, { useState, useEffect } from 'react'
-import { useWallet } from '@txnlab/use-wallet-react'
+import { useWallet } from '../hooks/useWalletWrapper'
 import { useApplicationState, useRoleSwitcher } from '../contexts/ApplicationContext'
 import { getRoleColor, formatAddress, RoleMapping, getRoleByAddress, ADDRESSES } from '../services/roleMappingService'
 
@@ -16,7 +16,7 @@ interface WalletRoleSwitcherProps {
 }
 
 export function WalletRoleSwitcher({ compact = false, showBalance = false, className = '' }: WalletRoleSwitcherProps) {
-  const { providers, activeAddress, connect, disconnect, isReady } = useWallet()
+  const { providers, activeAddress, connect, disconnect } = useWallet()
   const { activeRole, availableRoles } = useApplicationState()
   const { switchToAddress } = useRoleSwitcher()
   const [isOpen, setIsOpen] = useState(false)
@@ -54,7 +54,7 @@ export function WalletRoleSwitcher({ compact = false, showBalance = false, class
       }
 
       // Find Lute wallet provider (or fallback to first available)
-      const luteProvider = providers?.find(p => 
+      const luteProvider = providers?.find((p: any) => 
         p.metadata.name.toLowerCase().includes('lute') ||
         p.metadata.name.toLowerCase().includes('defly') ||
         p.metadata.name.toLowerCase().includes('algorand')
@@ -393,7 +393,7 @@ export function WalletRoleSwitcher({ compact = false, showBalance = false, class
         <div className="mt-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <div className="text-xs text-blue-700 font-medium mb-1">Available Wallet Providers:</div>
           <div className="text-xs text-blue-600">
-            {providers.map(p => p.metadata.name).join(', ')}
+            {providers.map((p: any) => p.metadata.name).join(', ')}
           </div>
         </div>
       )}

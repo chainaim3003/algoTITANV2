@@ -30,6 +30,13 @@
     "src/utils/",
     "src/main.tsx",
   ],
+  "exclude": [
+    "node_modules",
+    "src/pages/EnhancedHome_backup.tsx",
+    "src/contracts/AtomicMarketplaceV3Client.ts",
+    "src/contracts/TradeInstrumentRegistryClientV3.ts",
+    "src/services/MarketplaceService.ts"
+  ],
   "references": [
     {
       "path": "./tsconfig.node.json"

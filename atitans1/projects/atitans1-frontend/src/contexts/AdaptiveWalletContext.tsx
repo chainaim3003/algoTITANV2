@@ -308,6 +308,7 @@ export function AdaptiveWalletProvider({ children }: AdaptiveWalletProviderProps
         window.removeEventListener('localnet-role-changed', handleRoleChange);
       };
     }
+    return undefined;
   }, [isLocalNet]);
   
   // FIXED: Load external wallet role only when address changes

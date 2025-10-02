@@ -5,6 +5,7 @@ import { ADDRESSES, RoleMappingService, getRoleByAddress } from './roleMappingSe
 import { getExporterAlgorandAddress } from '../config';
 import billsOfLadingData from '../data/mockBillsOfLading.json';
 import algosdk from 'algosdk';
+import { getErrorMessage } from '../utils/errorHandling';
 
 export interface DocumentSubmission {
   id: string;
@@ -25,7 +26,31 @@ export interface DocumentSubmission {
 }
 
 export interface BLWithTransactions extends BillOfLading {
+  id?: string; // For fallback identification
   transactions: TransactionInfo[];
+  status?: 'ACTIVE' | 'TRANSFERRED' | 'SETTLED' | 'EXPIRED'; // BL status
+  currentHolder?: string; // Current owner address
+  rwaAssetData?: { // RWA token information
+    assetId?: number;
+    totalShares?: number;
+    availableShares?: number;
+    pricePerShare?: number;
+  };
+  portOfLoading?: { // Flattened port info for easy access
+    name: string;
+    code: string;
+    city?: string;
+    state?: string;
+  };
+  portOfDischarge?: { // Flattened port info for easy access
+    name: string;
+    code: string;
+    city?: string;
+    country?: string;
+  };
+  createdAt?: string; // Creation timestamp
+  txnId?: string; // Transaction ID
+  explorerUrl?: string; // Blockchain explorer URL
   createdByCarrier?: {
     carrierAddress: string;
     assignedToExporter: string;
@@ -159,7 +184,7 @@ class RealAlgoTitansAPI {
       
       const submission: DocumentSubmission = {
         id: `DOC-${Date.now()}`,
-        exporterAddress: finalExporterAddress,
+        exporterAddress: params.exporterAddress,
         documentType: params.documentType,
         fileName: params.fileName,
         fileHash,
@@ -173,7 +198,7 @@ class RealAlgoTitansAPI {
       
       return { ...submission, submissionTxId: result.txId, explorerUrl: result.explorerUrl };
     } catch (error) {
-      console.error('Error submitting document:', error);
+      console.error('Error submitting document:', getErrorMessage(error));
       throw error;
     }
   }
@@ -297,7 +322,7 @@ class RealAlgoTitansAPI {
         enhancedResult = await enhancedAlgorandService.createEnhancedBLWithRWA({
           description: enhancedBLMetadata.cargoDescription,
           cargoValue,
-          exporterAddress: params.exporterAddress,
+          exporterAddress: finalExporterAddress,
           dcsaVersion: '3.0.0',
           blReference,
           metadataHash: ipfsMetadata.hash,
@@ -319,7 +344,7 @@ class RealAlgoTitansAPI {
         });
         
         // Create mock Box Storage result for consistency
-        enhancedResult.boxStorage = {
+        (enhancedResult as any).boxStorage = {
           boxId: `box_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           boxName: enhancedBLMetadata.algorandBoxStorage.boxKey,
           appId: 12345678, // Mock app ID
@@ -330,7 +355,7 @@ class RealAlgoTitansAPI {
         };
         
         // Create mock RWA asset for consistency
-        enhancedResult.rwaAsset = {
+        (enhancedResult as any).rwaAsset = {
           assetId: Math.floor(Math.random() * 900000) + 100000,
           transactionId: enhancedResult.txId,
           explorerUrl: enhancedResult.explorerUrl,
@@ -373,19 +398,18 @@ class RealAlgoTitansAPI {
           },
         },
         consignmentItems: params.blData.consignmentItems || [
-          {
-            carrierBookingReference: `CBR-${Date.now()}`,
-            descriptionOfGoods: [enhancedBLMetadata.cargoDescription],
-            HSCodes: ['0904.11.10'],
-            cargoItems: [
-              {
-                equipmentReference: 'CONT001',
-                cargoGrossWeight: { value: 2500, unit: 'KGM' },
-                cargoNetWeight: { value: 2350, unit: 'KGM' },
-                outerPackaging: { numberOfPackages: 100, packageCode: 'BG', description: 'PP Bags' },
-              },
-            ],
-          },
+        {
+        carrierBookingReference: `CBR-${Date.now()}`,
+        descriptionOfGoods: [enhancedBLMetadata.cargoDescription],
+        HSCodes: ['0904.11.10'],
+        cargoItems: [
+        {
+        equipmentReference: 'CONT001',
+        cargoGrossWeight: { value: 2500, unit: 'KGM' },
+        outerPackaging: { numberOfPackages: 100, packageCode: 'BG', description: 'PP Bags' },
+        },
+        ],
+        },
         ],
         transports: params.blData.transports || {
           portOfLoading: { portName: 'Chennai Port', portCode: 'INMAA' },
@@ -421,9 +445,14 @@ class RealAlgoTitansAPI {
           encryptionKey: `key_${Math.random().toString(36).substring(2, 15)}`,
         },
         // Enhanced Box Storage Data
-        algorandBoxStorage: enhancedResult.boxStorage,
+        algorandBoxStorage: (enhancedResult as any).boxStorage,
         // Enhanced RWA Asset Data
-        rwaAssetData: enhancedResult.rwaAsset,
+        rwaAssetData: (enhancedResult as any).rwaAsset ? {
+          assetId: (enhancedResult as any).rwaAsset.assetId,
+          totalShares: (enhancedResult as any).rwaAsset.totalShares,
+          availableShares: (enhancedResult as any).rwaAsset.totalShares,
+          pricePerShare: (enhancedResult as any).rwaAsset.sharePrice
+        } : undefined,
         transactions: [{
           txId: enhancedResult.txId,
           confirmedRound: enhancedResult.confirmedRound,
@@ -449,10 +478,9 @@ class RealAlgoTitansAPI {
           shareTokenTx: {
             txId: enhancedResult.txId,
             confirmedRound: enhancedResult.confirmedRound,
-            explorerUrl: enhancedResult.explorerUrl,
-            assetId: enhancedResult.rwaAsset?.assetId
+            explorerUrl: enhancedResult.explorerUrl
           },
-          assetId: enhancedResult.rwaAsset?.assetId,
+          assetId: (enhancedResult as any).rwaAsset?.assetId,
         },
       };
 
@@ -462,8 +490,8 @@ class RealAlgoTitansAPI {
       return newBL;
       
     } catch (error) {
-      console.error('🚨 Error in ENHANCED createBLByCarrier:', error);
-      throw new Error(`Enhanced BL creation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('🚨 Error in ENHANCED createBLByCarrier:', getErrorMessage(error));
+      throw new Error(`Enhanced BL creation failed: ${getErrorMessage(error)}`);
     }
   }
 
@@ -550,7 +578,7 @@ class RealAlgoTitansAPI {
       this.tokenizedBLs.push(tokenizedBL);
       return tokenizedBL;
     } catch (error) {
-      console.error('Error in REAL tokenizeBL:', error);
+      console.error('Error in REAL tokenizeBL:', getErrorMessage(error));
       throw error;
     }
   }
@@ -616,7 +644,7 @@ class RealAlgoTitansAPI {
       
       return { ...investment, transactionResult: investResult };
     } catch (error) {
-      console.error('Error in REAL makeInvestment:', error);
+      console.error('Error in REAL makeInvestment:', getErrorMessage(error));
       throw error;
     }
   }
@@ -980,6 +1008,34 @@ class RealAlgoTitansAPI {
 
   async getUserByAddress(address: string): Promise<UserRole | null> {
     return this.users.find(user => user.address === address) || null;
+  }
+
+  // NEW: Add Bill of Lading to storage
+  async addBillOfLading(bl: BLWithTransactions): Promise<void> {
+    console.log('📦 Adding BL to realAPI storage:', bl.transportDocumentReference);
+    console.log('📊 BL Data:', {
+      ref: bl.transportDocumentReference,
+      assignedTo: bl.createdByCarrier?.assignedToExporter,
+      currentHolder: bl.currentHolder,
+      assetId: bl.tokenizationData?.assetId
+    });
+    
+    // Check if BL already exists
+    const existingIndex = this.billsOfLading.findIndex(
+      existing => existing.transportDocumentReference === bl.transportDocumentReference
+    );
+    
+    if (existingIndex >= 0) {
+      // Update existing BL
+      console.log('♻️ Updating existing BL');
+      this.billsOfLading[existingIndex] = bl;
+    } else {
+      // Add new BL
+      console.log('➕ Adding new BL');
+      this.billsOfLading.push(bl);
+    }
+    
+    console.log('✅ BL saved! Total BLs:', this.billsOfLading.length);
   }
 }
 

@@ -1,6 +1,7 @@
 import algosdk from 'algosdk';
 import { getAlgodConfigFromViteEnvironment } from '../utils/network/getAlgoClientConfigs';
 import { getAppId } from '../config/appIds';
+import { getErrorMessage } from '../utils/errorHandling';
 
 export async function initializeContract(
   sender: string,
@@ -26,7 +27,6 @@ export async function initializeContract(
       appArgs: [
         new TextEncoder().encode('initialize')
       ],
-      fee: 1000,
       suggestedParams,
     });
     
@@ -40,7 +40,7 @@ export async function initializeContract(
     return sendResult.txid;
     
   } catch (error) {
-    console.error('Error initializing contract:', error);
+    console.error('Error initializing contract:', getErrorMessage(error));
     throw error;
   }
 }

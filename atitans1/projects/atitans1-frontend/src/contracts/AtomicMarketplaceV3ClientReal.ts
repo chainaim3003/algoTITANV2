@@ -6,6 +6,8 @@
  */
 import { AlgorandClient } from '@algorandfoundation/algokit-utils'
 import algosdk from 'algosdk'
+import { filterSignedTransactions, getTxId, getGlobalState } from '../utils/algosdkCompat'
+import { getErrorMessage } from '../utils/errorHandling'
 
 export interface MarketplaceListing {
   listingId: bigint
@@ -70,7 +72,7 @@ export class AtomicMarketplaceV3Client {
       const suggestedParams = await client.getTransactionParams().do()
       
       const appCallTxn = algosdk.makeApplicationCallTxnFromObject({
-        from: this.config.sender || '',
+        sender: this.config.sender || '',
         suggestedParams,
         appIndex: this.appId,
         onComplete: algosdk.OnApplicationComplete.NoOpOC,
@@ -84,13 +86,14 @@ export class AtomicMarketplaceV3Client {
       })
 
       const signedTxns = await params.signer([appCallTxn], [0])
-      const { txId } = await client.sendRawTransaction(signedTxns).do()
+      const response = await client.sendRawTransaction(filterSignedTransactions(signedTxns)).do()
+      const txId = getTxId(response)
       
       console.log(`✅ V3 Marketplace initialized with Registry: ${params.registryAppId}, USDC: ${params.usdcAssetId}`)
       
       return { txnId: txId, return: true }
     } catch (error) {
-      console.error('Error initializing marketplace:', error)
+      console.error('Error initializing marketplace:', getErrorMessage(error))
       // Mock successful result for development
       this.registryAppId = params.registryAppId
       this.usdcAssetId = params.usdcAssetId
@@ -116,7 +119,7 @@ export class AtomicMarketplaceV3Client {
       const listingId = BigInt(Date.now())
       
       const appCallTxn = algosdk.makeApplicationCallTxnFromObject({
-        from: this.config.sender || '',
+        sender: this.config.sender || '',
         suggestedParams,
         appIndex: this.appId,
         onComplete: algosdk.OnApplicationComplete.NoOpOC,
@@ -134,7 +137,8 @@ export class AtomicMarketplaceV3Client {
       })
 
       const signedTxns = await params.signer([appCallTxn], [0])
-      const { txId } = await client.sendRawTransaction(signedTxns).do()
+      const response = await client.sendRawTransaction(filterSignedTransactions(signedTxns)).do()
+      const txId = getTxId(response)
       
       console.log(`✅ Instrument ${params.instrumentId} listed with ID: ${listingId}`)
       console.log(`   - Ask Price ALGO: ${params.askPriceAlgo}`)
@@ -147,7 +151,7 @@ export class AtomicMarketplaceV3Client {
         explorerUrl: `https://testnet.algoexplorer.io/tx/${txId}`
       }
     } catch (error) {
-      console.error('Error listing instrument:', error)
+      console.error('Error listing instrument:', getErrorMessage(error))
       // Mock successful result for development
       const mockListingId = BigInt(Date.now())
       const mockTxId = `LIST${Date.now()}${Math.random().toString(36).substr(2, 6)}`
@@ -179,15 +183,15 @@ export class AtomicMarketplaceV3Client {
       
       // Payment transaction to marketplace
       const paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-        from: params.buyerAddress,
-        to: this.appAddress,
+        sender: params.buyerAddress,
+        receiver: this.appAddress,
         amount: Number(params.paymentAmount),
         suggestedParams
       })
 
       // Application call to process purchase
       const appCallTxn = algosdk.makeApplicationCallTxnFromObject({
-        from: params.buyerAddress,
+        sender: params.buyerAddress,
         suggestedParams,
         appIndex: this.appId,
         onComplete: algosdk.OnApplicationComplete.NoOpOC,
@@ -204,7 +208,8 @@ export class AtomicMarketplaceV3Client {
       algosdk.assignGroupID(txns)
       
       const signedTxns = await params.signer(txns, [0, 1])
-      const { txId } = await client.sendRawTransaction(signedTxns).do()
+      const response = await client.sendRawTransaction(filterSignedTransactions(signedTxns)).do()
+      const txId = getTxId(response)
       
       console.log(`✅ Purchase completed with ALGO:`)
       console.log(`   - Listing ID: ${params.listingId}`)
@@ -214,7 +219,7 @@ export class AtomicMarketplaceV3Client {
       
       return { txnId: txId, saleId, return: true }
     } catch (error) {
-      console.error('Error purchasing with ALGO:', error)
+      console.error('Error purchasing with ALGO:', getErrorMessage(error))
       // Mock successful result for development
       const mockSaleId = BigInt(Date.now())
       const mockTxId = `PURCHASE${Date.now()}${Math.random().toString(36).substr(2, 6)}`
@@ -240,8 +245,8 @@ export class AtomicMarketplaceV3Client {
       
       // USDC transfer to marketplace
       const usdcTransferTxn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
-        from: params.buyerAddress,
-        to: this.appAddress,
+        sender: params.buyerAddress,
+        receiver: this.appAddress,
         amount: Number(params.usdcAmount),
         assetIndex: this.usdcAssetId,
         suggestedParams
@@ -249,7 +254,7 @@ export class AtomicMarketplaceV3Client {
 
       // Application call to process purchase
       const appCallTxn = algosdk.makeApplicationCallTxnFromObject({
-        from: params.buyerAddress,
+        sender: params.buyerAddress,
         suggestedParams,
         appIndex: this.appId,
         onComplete: algosdk.OnApplicationComplete.NoOpOC,
@@ -267,7 +272,8 @@ export class AtomicMarketplaceV3Client {
       algosdk.assignGroupID(txns)
       
       const signedTxns = await params.signer(txns, [0, 1])
-      const { txId } = await client.sendRawTransaction(signedTxns).do()
+      const response = await client.sendRawTransaction(filterSignedTransactions(signedTxns)).do()
+      const txId = getTxId(response)
       
       console.log(`✅ Purchase completed with USDC:`)
       console.log(`   - Listing ID: ${params.listingId}`)
@@ -277,7 +283,7 @@ export class AtomicMarketplaceV3Client {
       
       return { txnId: txId, saleId, return: true }
     } catch (error) {
-      console.error('Error purchasing with USDC:', error)
+      console.error('Error purchasing with USDC:', getErrorMessage(error))
       // Mock successful result for development
       const mockSaleId = BigInt(Date.now())
       const mockTxId = `USDCPURCHASE${Date.now()}${Math.random().toString(36).substr(2, 6)}`
@@ -306,7 +312,7 @@ export class AtomicMarketplaceV3Client {
         marketplaceFee: 250n // 2.5%
       }
     } catch (error) {
-      console.error('Error getting listing:', error)
+      console.error('Error getting listing:', getErrorMessage(error))
       throw error
     }
   }
@@ -329,7 +335,7 @@ export class AtomicMarketplaceV3Client {
         txnHash: `SALE${Date.now()}`
       }
     } catch (error) {
-      console.error('Error getting sale:', error)
+      console.error('Error getting sale:', getErrorMessage(error))
       throw error
     }
   }
@@ -347,7 +353,7 @@ export class AtomicMarketplaceV3Client {
         89n             // Total sales completed
       ]
     } catch (error) {
-      console.error('Error getting marketplace stats:', error)
+      console.error('Error getting marketplace stats:', getErrorMessage(error))
       return [0n, 0n, 0n, 0n]
     }
   }
@@ -364,7 +370,7 @@ export class AtomicMarketplaceV3Client {
       const suggestedParams = await client.getTransactionParams().do()
       
       const appCallTxn = algosdk.makeApplicationCallTxnFromObject({
-        from: this.config.sender || '',
+        sender: this.config.sender || '',
         suggestedParams,
         appIndex: this.appId,
         onComplete: algosdk.OnApplicationComplete.NoOpOC,
@@ -375,13 +381,14 @@ export class AtomicMarketplaceV3Client {
       })
 
       const signedTxns = await params.signer([appCallTxn], [0])
-      const { txId } = await client.sendRawTransaction(signedTxns).do()
+      const response = await client.sendRawTransaction(filterSignedTransactions(signedTxns)).do()
+      const txId = getTxId(response)
       
       console.log(`✅ Listing ${params.listingId} cancelled`)
       
       return { txnId: txId, return: true }
     } catch (error) {
-      console.error('Error cancelling listing:', error)
+      console.error('Error cancelling listing:', getErrorMessage(error))
       return { txnId: `CANCEL${Date.now()}`, return: true }
     }
   }
@@ -402,7 +409,7 @@ export class AtomicMarketplaceV3Client {
       const bidId = BigInt(Date.now())
       
       const appCallTxn = algosdk.makeApplicationCallTxnFromObject({
-        from: this.config.sender || '',
+        sender: this.config.sender || '',
         suggestedParams,
         appIndex: this.appId,
         onComplete: algosdk.OnApplicationComplete.NoOpOC,
@@ -417,7 +424,8 @@ export class AtomicMarketplaceV3Client {
       })
 
       const signedTxns = await params.signer([appCallTxn], [0])
-      const { txId } = await client.sendRawTransaction(signedTxns).do()
+      const response = await client.sendRawTransaction(filterSignedTransactions(signedTxns)).do()
+      const txId = getTxId(response)
       
       console.log(`✅ Discount bid submitted:`)
       console.log(`   - Instrument: ${params.instrumentId}`)
@@ -426,7 +434,7 @@ export class AtomicMarketplaceV3Client {
       
       return { txnId: txId, bidId }
     } catch (error) {
-      console.error('Error submitting discount bid:', error)
+      console.error('Error submitting discount bid:', getErrorMessage(error))
       return { txnId: `BID${Date.now()}`, bidId: BigInt(Date.now()) }
     }
   }
@@ -443,7 +451,7 @@ export class AtomicMarketplaceV3Client {
       const suggestedParams = await client.getTransactionParams().do()
       
       const appCallTxn = algosdk.makeApplicationCallTxnFromObject({
-        from: this.config.sender || '',
+        sender: this.config.sender || '',
         suggestedParams,
         appIndex: this.appId,
         onComplete: algosdk.OnApplicationComplete.NoOpOC,
@@ -454,13 +462,14 @@ export class AtomicMarketplaceV3Client {
       })
 
       const signedTxns = await params.signer([appCallTxn], [0])
-      const { txId } = await client.sendRawTransaction(signedTxns).do()
+      const response = await client.sendRawTransaction(filterSignedTransactions(signedTxns)).do()
+      const txId = getTxId(response)
       
       console.log(`✅ Discount bid ${params.bidId} accepted`)
       
       return { txnId: txId, return: true }
     } catch (error) {
-      console.error('Error accepting discount bid:', error)
+      console.error('Error accepting discount bid:', getErrorMessage(error))
       return { txnId: `ACCEPT${Date.now()}`, return: true }
     }
   }
@@ -478,7 +487,7 @@ export class AtomicMarketplaceV3Client {
       const suggestedParams = await client.getTransactionParams().do()
       
       const appCallTxn = algosdk.makeApplicationCallTxnFromObject({
-        from: this.config.sender || '',
+        sender: this.config.sender || '',
         suggestedParams,
         appIndex: this.appId,
         onComplete: algosdk.OnApplicationComplete.NoOpOC,
@@ -491,13 +500,14 @@ export class AtomicMarketplaceV3Client {
       })
 
       const signedTxns = await params.signer([appCallTxn], [0])
-      const { txId } = await client.sendRawTransaction(signedTxns).do()
+      const response = await client.sendRawTransaction(filterSignedTransactions(signedTxns)).do()
+      const txId = getTxId(response)
       
       console.log(`✅ Fees withdrawn: ${params.amount} to ${params.recipient}`)
       
       return { txnId: txId, return: true }
     } catch (error) {
-      console.error('Error withdrawing fees:', error)
+      console.error('Error withdrawing fees:', getErrorMessage(error))
       return { txnId: `WITHDRAW${Date.now()}`, return: true }
     }
   }
@@ -509,9 +519,9 @@ export class AtomicMarketplaceV3Client {
     try {
       const client = this.algorand.client.algod
       const appInfo = await client.getApplicationByID(this.appId).do()
-      return appInfo.params['global-state'] || {}
+      return getGlobalState(appInfo)
     } catch (error) {
-      console.error('Error getting marketplace global state:', error)
+      console.error('Error getting marketplace global state:', getErrorMessage(error))
       return {
         total_volume: 0,
         total_fees: 0,

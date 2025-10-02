@@ -5,7 +5,7 @@ import Account from '../components/Account';
 import { BLDashboard } from '../components/BLDashboard';
 import { MarketplaceDashboard } from '../components/MarketplaceDashboard';
 import CarrierDashboard from '../components/CarrierDashboard';
-import ImporterDashboard from '../components/ImporterDashboard';
+import { ImporterDashboard } from '../components/ImporterDashboard';
 import InvestorDashboard from '../components/InvestorDashboard';
 import RegulatorDashboard from '../components/RegulatorDashboard';
 import AdminDashboard from '../components/AdminDashboard';
@@ -236,7 +236,7 @@ export default function EnhancedHome() {
         {activeTab === 'home' && <HomeSection />}
         {activeTab === 'exporter' && <BLDashboard />}
         {activeTab === 'carrier' && <CarrierDashboard />}
-        {activeTab === 'importer' && <ImporterDashboard />}
+        {activeTab === 'importer' && <ImporterDashboard marketplaceService={null as any} onNavigateToMarketplace={() => setActiveTab('marketplace')} />}
         {activeTab === 'investor' && <InvestorDashboard />}
         {activeTab === 'marketplace' && <EnhancedMarketplaceDashboard />}
         {activeTab === 'regulator' && <RegulatorDashboard />}

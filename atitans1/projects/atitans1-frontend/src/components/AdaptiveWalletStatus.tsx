@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAdaptiveWallet } from '../contexts/AdaptiveWalletContext';
 import { useWallet } from '@txnlab/use-wallet-react';
-import ExternalWalletRoleSelector from './ExternalWalletRoleSelector';
+// SIMPLIFIED: ExternalWalletRoleSelector hidden to simplify UX - tabs provide role switching
+// import ExternalWalletRoleSelector from './ExternalWalletRoleSelector';
 
 interface AdaptiveWalletStatusProps {
   requireConnection?: boolean;
@@ -200,10 +201,9 @@ export function AdaptiveWalletStatus({
   
   return (
     <>
-      {/* External Wallet Role Selection (only for non-LocalNet) */}
-      {!isLocalNet && currentAddress && !currentRole && (
-        <ExternalWalletRoleSelector />
-      )}
+      {/* SIMPLIFIED: Role selection removed - tabs provide navigation */}
+      {/* External Wallet Role Selection is hidden to simplify UX */}
+      {/* Users can switch roles by clicking tabs (Exporter, Carrier, Importer, etc.) */}
       
       {/* Main Wallet Status */}
       {currentAddress && (
@@ -229,21 +229,17 @@ export function AdaptiveWalletStatus({
                     <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getRoleColor(currentRole)}`}>
                       {currentNickname}
                     </span>
-                    {showRoleSwitcher && (
-                      <>
-                        {isLocalNet ? (
-                          <button
-                            onClick={() => setShowLocalNetRoles(!showLocalNetRoles)}
-                            className="text-blue-600 hover:text-blue-800 text-xs px-2 py-1 border border-blue-300 rounded hover:bg-blue-50 transition-colors"
-                            title="Switch LocalNet role"
-                          >
-                            🔄 Switch
-                          </button>
-                        ) : (
-                          <ExternalWalletRoleSelector compact={true} />
-                        )}
-                      </>
+                    {/* SIMPLIFIED: Role switcher hidden - use tabs instead */}
+                    {showRoleSwitcher && isLocalNet && (
+                      <button
+                        onClick={() => setShowLocalNetRoles(!showLocalNetRoles)}
+                        className="text-blue-600 hover:text-blue-800 text-xs px-2 py-1 border border-blue-300 rounded hover:bg-blue-50 transition-colors"
+                        title="Switch LocalNet role"
+                      >
+                        🔄 Switch
+                      </button>
                     )}
+                    {/* External wallet role selector hidden - tabs provide role switching */}
                   </div>
                 </div>
               )}
@@ -252,7 +248,7 @@ export function AdaptiveWalletStatus({
               <div className="space-y-2">
                 <div>
                   <div className="text-xs text-gray-500 mb-1">
-                    Current {pageContext?.charAt(0).toUpperCase() + pageContext?.slice(1)} Address:
+                    Current {pageContext ? pageContext.charAt(0).toUpperCase() + pageContext.slice(1) : ''} Address:
                   </div>
                   <div className="flex items-center space-x-2">
                     <code className="bg-white px-2 py-1 rounded border text-xs font-mono text-gray-800 break-all">

@@ -66,15 +66,10 @@ export const useContracts = (): UseContractsResult => {
 
       if (config.network === 'localnet') {
         algorand = AlgorandClient.fromEnvironment()
+      } else if (config.network === 'testnet') {
+        algorand = AlgorandClient.testNet()
       } else {
-        // For testnet/mainnet, use public nodes
-        algorand = new AlgorandClient({
-          server: config.network === 'testnet' 
-            ? 'https://testnet-api.algonode.cloud'
-            : 'https://mainnet-api.algonode.cloud',
-          port: 443,
-          token: ''
-        })
+        algorand = AlgorandClient.mainNet()
       }
 
       // Initialize contract clients

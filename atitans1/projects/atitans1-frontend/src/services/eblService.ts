@@ -1,6 +1,8 @@
 import algosdk from 'algosdk';
 import { getAlgodConfigFromViteEnvironment } from '../utils/network/getAlgoClientConfigs';
 import { getAppId } from '../config/appIds';
+import { getInnerTxns, getAssetIndex } from '../utils/algosdkCompat';
+import { getErrorMessage } from '../utils/errorHandling';
 
 export interface EBLCreationParams {
   instrumentNumber: string;
@@ -78,8 +80,6 @@ export async function createRealEBLInstrument(params: EBLCreationParams): Promis
       ],
       // Add accounts that the contract might need to access
       accounts: [params.exporterAddress, params.importerAddress],
-      // Increase fee for complex transaction
-      fee: 2000,
       suggestedParams,
     });
     
@@ -114,15 +114,15 @@ export async function createRealEBLInstrument(params: EBLCreationParams): Promis
     
     // Look for created asset ID in inner transactions
     let assetId: number | undefined;
-    if (confirmedTxn.innerTxns) {
-      for (const innerTxn of confirmedTxn.innerTxns) {
-        if (innerTxn.txnType === 'acfg' && innerTxn.assetIndex) {
-          assetId = innerTxn.assetIndex;
-          console.log('Found created asset ID:', assetId);
-          break;
-        }
+    const innerTxns = getInnerTxns(confirmedTxn);
+    for (const innerTxn of innerTxns) {
+    const assetIdx = getAssetIndex(innerTxn);
+    if (assetIdx) {
+    assetId = assetIdx;
+    console.log('Found created asset ID:', assetId);
+      break;
       }
-    }
+      }
     
     const explorerUrl = algodConfig.network === 'testnet' 
       ? `https://testnet.algoexplorer.io/tx/${sendResult.txid}`
@@ -140,7 +140,7 @@ export async function createRealEBLInstrument(params: EBLCreationParams): Promis
       txId: sendResult.txid,
       confirmedRound: Number(confirmedTxn.confirmedRound || 0),
       explorerUrl,
-      instrumentId,
+      instrumentId: Number(instrumentId),
       assetId
     };
     
@@ -165,6 +165,6 @@ export async function createRealEBLInstrument(params: EBLCreationParams): Promis
       }
     }
     
-    throw new Error(`Failed to create eBL: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(`Failed to create eBL: ${getErrorMessage(error)}`);
   }
 }

@@ -5,17 +5,29 @@ import { getAlgodConfigFromViteEnvironment } from '../utils/network/getAlgoClien
 export function SmartWalletButton() {
   const { wallets, activeAccount } = useWallet();
   const [showWalletModal, setShowWalletModal] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
   const algoConfig = getAlgodConfigFromViteEnvironment();
   const isLocalNet = algoConfig.network === 'localnet';
 
   const handleConnect = async (walletId: string) => {
+    // Prevent duplicate connection attempts
+    if (isConnecting) {
+      console.log('⚠️ Connection already in progress, ignoring duplicate request');
+      return;
+    }
+
     const wallet = wallets.find(w => w.id === walletId);
     if (wallet) {
       try {
+        setIsConnecting(true);
+        console.log(`🔌 Connecting to ${wallet.metadata.name}...`);
         await wallet.connect();
+        console.log(`✅ Connected to ${wallet.metadata.name}`);
         setShowWalletModal(false);
       } catch (error) {
-        console.error('Wallet connection failed:', error);
+        console.error('❌ Wallet connection failed:', error);
+      } finally {
+        setIsConnecting(false);
       }
     }
   };
@@ -35,7 +47,7 @@ export function SmartWalletButton() {
     return (
       <div className="flex items-center space-x-2">
         <div className={`px-3 py-2 rounded-lg text-sm ${isLocalNet ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
-          <div className="font-semibold">{activeAccount.providerId}</div>
+          <div className="font-semibold">{wallets.find(w => w.isConnected)?.metadata?.name || 'Wallet'}</div>
           <div className="font-mono text-xs">{formatAddress(activeAccount.address)}</div>
         </div>
         <button
@@ -93,9 +105,11 @@ export function SmartWalletButton() {
                 <button
                   key={wallet.id}
                   onClick={() => handleConnect(wallet.id)}
-                  disabled={wallet.isConnected}
+                  disabled={wallet.isConnected || isConnecting}
                   className={`w-full p-3 rounded border text-left hover:bg-gray-50 transition-colors ${
-                    wallet.isConnected ? 'bg-green-50 border-green-200' : 'border-gray-200'
+                    wallet.isConnected ? 'bg-green-50 border-green-200' : 
+                    isConnecting ? 'bg-gray-100 border-gray-300 cursor-wait' : 
+                    'border-gray-200'
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -112,6 +126,9 @@ export function SmartWalletButton() {
                     </div>
                     {wallet.isConnected && (
                       <span className="text-green-600 text-sm">✓ Connected</span>
+                    )}
+                    {isConnecting && !wallet.isConnected && (
+                      <span className="text-blue-600 text-sm">⏳ Connecting...</span>
                     )}
                   </div>
                 </button>

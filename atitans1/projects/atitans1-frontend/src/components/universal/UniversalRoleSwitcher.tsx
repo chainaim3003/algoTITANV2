@@ -5,7 +5,7 @@
  * Integrates with the existing role management system and wallet switching
  */
 import React, { useState } from 'react'
-import { useWallet } from '@txnlab/use-wallet-react'
+import { useWallet } from '../../hooks/useWalletWrapper'
 import { useApplicationState, useRoleSwitcher } from '../../contexts/ApplicationContext'
 import { ADDRESSES, getRoleByAddress, formatAddress, getAllRoleMappings, RoleMapping } from '../../services/roleMappingService'
 
@@ -61,10 +61,10 @@ export function UniversalRoleSwitcher({ currentTab, className = '' }: UniversalR
 
   const handleOpenLuteWallet = async () => {
     try {
-      console.log('Available providers:', providers?.map(p => ({ name: p.metadata.name, id: p.metadata.id })))
+      console.log('Available providers:', providers?.map((p: any) => ({ name: p.metadata.name, id: p.metadata.id })))
       
       // Find Lute wallet provider with more comprehensive detection
-      const luteProvider = providers?.find(p => {
+      const luteProvider = providers?.find((p: any) => {
         const name = p.metadata.name.toLowerCase()
         const id = p.metadata.id.toLowerCase()
         return name.includes('lute') || 
@@ -79,7 +79,7 @@ export function UniversalRoleSwitcher({ currentTab, className = '' }: UniversalR
       
       if (!luteProvider) {
         // Show available providers for debugging
-        const availableProviders = providers?.map(p => `${p.metadata.name} (${p.metadata.id})`).join(', ') || 'None'
+        const availableProviders = providers?.map((p: any) => `${p.metadata.name} (${p.metadata.id})`).join(', ') || 'None'
         console.log('Available wallet providers:', availableProviders)
         alert(`Lute wallet not detected. Available providers: ${availableProviders}. Please ensure Lute extension is installed and page is refreshed.`)
         return
@@ -125,6 +125,7 @@ export function UniversalRoleSwitcher({ currentTab, className = '' }: UniversalR
       
     } catch (error) {
       console.error('Wallet connection error:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Failed to connect to wallet';
       
       // Show detailed error and manual instructions
       const errorModal = document.createElement('div')
@@ -137,7 +138,7 @@ export function UniversalRoleSwitcher({ currentTab, className = '' }: UniversalR
           </div>
           <div class="space-y-3 text-sm">
             <div class="bg-red-50 p-3 rounded">
-              <strong>Error:</strong> ${error.message || 'Failed to connect to wallet'}
+              <strong>Error:</strong> ${errorMessage}
             </div>
             <div>
               <strong>Manual Steps:</strong>
