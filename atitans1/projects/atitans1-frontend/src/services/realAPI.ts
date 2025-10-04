@@ -6,6 +6,8 @@ import { getExporterAlgorandAddress } from '../config';
 import billsOfLadingData from '../data/mockBillsOfLading.json';
 import algosdk from 'algosdk';
 import { getErrorMessage } from '../utils/errorHandling';
+import { boxStorageService } from './boxStorage';
+import { escrowV4Service } from './escrowV4Service';
 
 export interface DocumentSubmission {
   id: string;
@@ -27,7 +29,7 @@ export interface DocumentSubmission {
 
 export interface BLWithTransactions extends BillOfLading {
   id?: string; // For fallback identification
-  transactions: TransactionInfo[];
+  transactions?: TransactionInfo[]; // Made optional to avoid type errors
   status?: 'ACTIVE' | 'TRANSFERRED' | 'SETTLED' | 'EXPIRED'; // BL status
   currentHolder?: string; // Current owner address
   rwaAssetData?: { // RWA token information
@@ -573,6 +575,10 @@ class RealAlgoTitansAPI {
         shareTokenTx: assetResult,
         assetId: assetResult.assetId,
       };
+      // Ensure transactions array exists before pushing
+      if (!bl.transactions) {
+        bl.transactions = [];
+      }
       bl.transactions.push(...tokenizedBL.transactions);
 
       this.tokenizedBLs.push(tokenizedBL);
@@ -715,7 +721,7 @@ class RealAlgoTitansAPI {
       return bl.createdByCarrier?.carrierAddress === carrierAddress ||
              bl.documentParties?.issuingParty?.partyName?.toLowerCase().includes('carrier') ||
              // Check if the carrier created this BL
-             bl.transactions.some(tx => tx.description?.includes('Enhanced eBL Creation'));
+             (bl.transactions && bl.transactions.some(tx => tx.description?.includes('Enhanced eBL Creation')));
     });
   }
 
@@ -850,7 +856,7 @@ class RealAlgoTitansAPI {
   // MARKETPLACE FUNCTIONALITY
   // ==========================================
 
-  // List RWA asset for sale on marketplace
+  // List RWA asset for sale on marketplace (listing only, buyer creates escrow trade)
   async listRWAForSale(params: {
     blReference: string;
     assetId: number;
@@ -859,15 +865,40 @@ class RealAlgoTitansAPI {
     priceUSDC?: number;
     validityDays: number;
   }): Promise<MarketplaceListing & { txnId: string; explorerUrl: string }> {
-    console.log('🏪 Listing RWA for sale:', params);
+    console.log('🏪 Listing RWA for sale (marketplace listing only):', params);
 
-    // Find the original BL to get asset details
-    const bl = this.billsOfLading.find(b => b.transportDocumentReference === params.blReference);
+    // Try to find BL in internal array first
+    let bl = this.billsOfLading.find(b => b.transportDocumentReference === params.blReference);
+    
+    // If not found, try loading from box storage
+    if (!bl) {
+      console.log('📦 BL not found in internal array, trying box storage...');
+      try {
+        const allBLs = await boxStorageService.listAllBLs();
+        const foundBL = allBLs.find(b => b.transportDocumentReference === params.blReference);
+        
+        if (foundBL) {
+          console.log('✅ Found BL in box storage:', foundBL.transportDocumentReference);
+          // Convert to BLWithTransactions type
+          bl = {
+            ...foundBL,
+            transactions: [], // ExtendedBillOfLading doesn't have transactions, so initialize empty
+            status: foundBL.status === 'created' ? 'ACTIVE' : 
+                    foundBL.status === 'transferred' ? 'TRANSFERRED' : 
+                    foundBL.status === 'pending_transfer' ? 'ACTIVE' : undefined
+          } as BLWithTransactions;
+        }
+      } catch (boxError) {
+        console.warn('⚠️ Could not load from box storage:', boxError);
+      }
+    }
+    
     if (!bl) {
       throw new Error('Bill of Lading not found');
     }
 
     // Generate mock transaction for marketplace listing
+    // NOTE: Actual escrow trade will be created by BUYER/IMPORTER using V4 Escrow Contract
     const txnId = `LISTING_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
     const explorerUrl = `https://testnet.algoexplorer.io/tx/${txnId}`;
 
@@ -894,7 +925,7 @@ class RealAlgoTitansAPI {
 
     this.marketplaceListings.push(listing);
 
-    console.log('✅ RWA listed for sale:', listing);
+    console.log('✅ RWA listed for sale (buyer will create escrow trade):', listing);
     return { ...listing, txnId, explorerUrl };
   }
 

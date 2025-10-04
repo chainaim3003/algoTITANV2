@@ -7,7 +7,8 @@ import React, { useState, useEffect } from 'react'
 import { TradeInstrument } from '../types/v3-contract-types'
 import { MarketplaceService } from '../services/MarketplaceService'
 import { useContracts } from '../hooks/useContracts'
-import { useWallet } from '../hooks/useWallet'
+import { useWallet } from '@txnlab/use-wallet-react'
+import algosdk from 'algosdk'
 
 interface ImporterDashboardProps {
   marketplaceService: MarketplaceService
@@ -19,48 +20,90 @@ export const ImporterDashboard: React.FC<ImporterDashboardProps> = ({
   onNavigateToMarketplace 
 }) => {
   const { contracts } = useContracts()
-  const { activeAccount, accountAssets } = useWallet()
+  const { activeAddress } = useWallet()
   const [purchasedInstruments, setPurchasedInstruments] = useState<TradeInstrument[]>([])
   const [loading, setLoading] = useState(true)
+  const [accountAssets, setAccountAssets] = useState<any[]>([])
 
   useEffect(() => {
-    if (activeAccount && accountAssets) {
+    if (activeAddress && contracts?.algorand) {
+      loadAccountAssets()
+    } else {
+      setLoading(false)
+    }
+  }, [activeAddress, contracts])
+
+  useEffect(() => {
+    if (activeAddress && accountAssets.length > 0) {
       loadPurchasedInstruments()
     }
-  }, [activeAccount, accountAssets])
+  }, [activeAddress, accountAssets])
+
+  const loadAccountAssets = async () => {
+    if (!activeAddress || !contracts?.algorand) return
+
+    try {
+      // Fetch account information from Algorand
+      const accountInfo = await contracts.algorand.client.algod
+        .accountInformation(activeAddress)
+        .do()
+
+      console.log('💰 Account assets:', accountInfo.assets)
+      
+      // Map assets to simpler format
+      const assets = (accountInfo.assets || []).map((asset: any) => ({
+        assetId: asset['asset-id'],
+        balance: asset.amount,
+        creator: asset.creator,
+        frozen: asset['is-frozen']
+      }))
+
+      setAccountAssets(assets)
+    } catch (error) {
+      console.error('Failed to load account assets:', error)
+      setAccountAssets([])
+    }
+  }
 
   const loadPurchasedInstruments = async () => {
-    if (!activeAccount || !accountAssets || !contracts?.registry) return
+    if (!activeAddress || !accountAssets || !contracts?.registry) {
+      setLoading(false)
+      return
+    }
 
     try {
       setLoading(true)
       
-      // Find instrument assets in user's wallet
-      const instrumentAssets = accountAssets.filter(asset => 
-        asset.balance > 0 && 
-        asset.unitName === 'eBL' // Filter for eBL instruments
-      )
-
-      // Get instrument details for each owned asset
+      console.log('🔍 Checking', accountAssets.length, 'assets for eBL instruments')
+      
+      // For now, we'll check all assets since we need to query the registry
+      // to determine if they are eBL instruments
       const instrumentDetails = await Promise.all(
-        instrumentAssets.map(async (asset) => {
-          try {
-            // Find instrument by asset ID
-            return await marketplaceService.getInstrumentDetails(BigInt(asset.assetId))
-          } catch (error) {
-            console.warn(`Failed to fetch instrument details for asset ${asset.assetId}:`, error)
-            return null
-          }
-        })
+        accountAssets
+          .filter(asset => asset.balance > 0)
+          .map(async (asset) => {
+            try {
+              // Try to get instrument details from registry
+              const instrument = await marketplaceService.getInstrumentDetails(BigInt(asset.assetId))
+              if (instrument) {
+                console.log('✅ Found instrument:', instrument.instrumentNumber)
+              }
+              return instrument
+            } catch (error) {
+              // Not an instrument asset, skip silently
+              return null
+            }
+          })
       )
 
       // Filter out null results and verify current holder
       const validInstruments = instrumentDetails
         .filter((instrument): instrument is TradeInstrument => 
           instrument !== null && 
-          instrument.currentHolder === activeAccount
+          instrument.currentHolder === activeAddress
         )
 
+      console.log('📦 Found', validInstruments.length, 'purchased instruments')
       setPurchasedInstruments(validInstruments)
     } catch (error) {
       console.error('Failed to load purchased instruments:', error)

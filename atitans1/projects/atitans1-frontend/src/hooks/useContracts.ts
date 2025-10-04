@@ -18,18 +18,23 @@ export interface UseContractsResult {
 
 // Get configuration from environment variables
 const getConfig = (): V3Config => {
-  const network = (process.env.REACT_APP_NETWORK as 'localnet' | 'testnet' | 'mainnet') || 'localnet'
+  // Support both VITE_ and REACT_APP_ prefixes for compatibility
+  const getEnvVar = (name: string): string | undefined => {
+    return import.meta.env[`VITE_${name}`] || import.meta.env[`REACT_APP_${name}`] || process.env[`VITE_${name}`] || process.env[`REACT_APP_${name}`]
+  }
+  
+  const network = (getEnvVar('NETWORK') || import.meta.env.VITE_ALGOD_NETWORK || 'testnet') as 'localnet' | 'testnet' | 'mainnet'
   
   return {
     network,
     contracts: {
-      registry: parseInt(process.env.REACT_APP_REGISTRY_APP_ID || '0'),
-      marketplace: parseInt(process.env.REACT_APP_MARKETPLACE_APP_ID || '0'),
-      financePool: parseInt(process.env.REACT_APP_FINANCE_POOL_APP_ID || '0'),
-      lending: parseInt(process.env.REACT_APP_LENDING_APP_ID || '0')
+      registry: parseInt(getEnvVar('REGISTRY_APP_ID') || '0'),
+      marketplace: parseInt(getEnvVar('MARKETPLACE_APP_ID') || '0'),
+      financePool: parseInt(getEnvVar('FINANCE_POOL_APP_ID') || '0'),
+      lending: parseInt(getEnvVar('LENDING_APP_ID') || '0')
     },
     assets: {
-      usdcAssetId: parseInt(process.env.REACT_APP_USDC_ASSET_ID || '31566704')
+      usdcAssetId: parseInt(getEnvVar('USDC_ASSET_ID') || '31566704')
     },
     features: {
       enableTrading: true,
@@ -58,7 +63,10 @@ export const useContracts = (): UseContractsResult => {
 
       // Validate configuration
       if (!config.contracts.registry || !config.contracts.marketplace) {
-        throw new Error('Missing contract configuration. Please check environment variables.')
+        console.warn('⚠️ Contract app IDs not configured. Importer Dashboard will not be available.')
+        console.warn('To enable: Add VITE_REGISTRY_APP_ID and VITE_MARKETPLACE_APP_ID to your .env file')
+        console.warn('Current config:', config.contracts)
+        throw new Error('Contract app IDs not configured. Please deploy contracts and add their IDs to .env file.')
       }
 
       // Initialize Algorand client based on network

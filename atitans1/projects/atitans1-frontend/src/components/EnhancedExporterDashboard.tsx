@@ -202,7 +202,7 @@ export function EnhancedExporterDashboard() {
         validityDays: saleData.validityDays
       })
       
-      // Call the real marketplace API
+      // Call the marketplace API (NOT creating escrow trade - that's done by buyer)
       const listingResult = await realAPI.listRWAForSale({
         blReference: asset.blReference,
         assetId: asset.assetId,

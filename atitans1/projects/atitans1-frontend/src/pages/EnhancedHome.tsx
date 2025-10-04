@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useWallet } from '@txnlab/use-wallet-react';
 import Account from '../components/Account';
 import { BLDashboard } from '../components/BLDashboard';
@@ -6,6 +6,8 @@ import { EnhancedExporterDashboard } from '../components/EnhancedExporterDashboa
 import { MarketplaceDashboard } from '../components/MarketplaceDashboard';
 import CarrierDashboard from '../components/CarrierDashboard';
 import { ImporterDashboard } from '../components/ImporterDashboard';
+import { ImporterDashboardEnhanced } from '../components/ImporterDashboardEnhanced';
+import { EscrowV4Marketplace } from '../components/EscrowV4Marketplace';
 import InvestorDashboard from '../components/InvestorDashboard';
 import RegulatorDashboard from '../components/RegulatorDashboard';
 import AdminDashboard from '../components/AdminDashboard';
@@ -15,19 +17,46 @@ import { EnvironmentAwareWallet } from '../components/EnvironmentAwareWallet';
 import { SmartWalletButton } from '../components/SmartWalletButton';
 import { useAddressManager } from '../hooks/useAddressManager';
 import { getAlgodConfigFromViteEnvironment } from '../utils/network/getAlgoClientConfigs';
+import { useContracts } from '../hooks/useContracts';
+import { MarketplaceService } from '../services/MarketplaceService';
 // SIMPLIFIED: UniversalRoleSwitcher removed - tabs provide sufficient navigation
 // import UniversalRoleSwitcher from '../components/universal/UniversalRoleSwitcher';
 import BLAPITest from '../components/BLAPITest';
 
-type TabType = 'home' | 'exporter' | 'carrier' | 'importer' | 'financier' | 'marketplace' | 'regulator' | 'admin' | 'about' | 'proxy-test' | 'api-test';
+type TabType = 'home' | 'exporter' | 'carrier' | 'importer' | 'financier' | 'marketplace' | 'escrow-marketplace' | 'regulator' | 'admin' | 'about' | 'proxy-test' | 'api-test';
 
 export default function EnhancedHome() {
   const [activeTab, setActiveTab] = useState<TabType>('home');
   const [selectedBuyer, setSelectedBuyer] = useState<'BUYER_1' | 'BUYER_2'>('BUYER_1');
   const [selectedInvestor, setSelectedInvestor] = useState<'INVESTOR_SMALL_1' | 'INVESTOR_SMALL_2' | 'INVESTOR_SMALL_3' | 'INVESTOR_SMALL_4' | 'INVESTOR_SMALL_5' | 'INVESTOR_LARGE_1' | 'INVESTOR_LARGE_2'>('INVESTOR_LARGE_1');
-  const { activeAddress } = useWallet();
+  const { activeAddress, signTransactions } = useWallet();
   const { isLocalNet, switchToRole, assignCurrentAddressToRole, getAllRoleAccounts } = useAddressManager();
   const algoConfig = getAlgodConfigFromViteEnvironment();
+  const { contracts, loading: contractsLoading, error: contractsError } = useContracts();
+
+  // Create MarketplaceService instance for Importer Dashboard
+  const marketplaceService = useMemo(() => {
+    console.log('🔍 MarketplaceService check:', {
+      hasContracts: !!contracts,
+      hasAlgorand: !!contracts?.algorand,
+      hasRegistry: !!contracts?.registry,
+      hasMarketplace: !!contracts?.marketplace,
+      hasSignTransactions: !!signTransactions
+    });
+    
+    if (!contracts?.algorand || !contracts?.registry || !contracts?.marketplace || !signTransactions) {
+      console.log('❌ MarketplaceService: Missing dependencies');
+      return null;
+    }
+    
+    console.log('✅ Creating MarketplaceService');
+    return new MarketplaceService(
+      contracts.algorand,
+      contracts.registry,
+      contracts.marketplace,
+      signTransactions
+    );
+  }, [contracts, signTransactions]);
 
   // Helper function to handle main tab switching with automatic role switching
   const handleTabSwitch = async (tab: TabType) => {
@@ -232,6 +261,16 @@ export default function EnhancedHome() {
                     }`}
                   >
                     🏬 Marketplace
+                  </button>
+                  <button
+                    onClick={() => handleTabSwitch('escrow-marketplace')}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      activeTab === 'escrow-marketplace'
+                        ? 'bg-purple-100 text-purple-700'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    💰 Escrow V4
                   </button>
                   <button
                     onClick={() => handleTabSwitch('admin')}
@@ -474,9 +513,109 @@ export default function EnhancedHome() {
         {activeTab === 'home' && <HomeSection />}
         {activeTab === 'exporter' && <EnhancedExporterDashboard />}
         {activeTab === 'carrier' && <CarrierDashboard />}
-        {activeTab === 'importer' && <div className="p-8 text-center"><p className="text-gray-600">Importer Dashboard - Under Development</p></div>}
+        {activeTab === 'importer' && marketplaceService && (
+          <ImporterDashboardEnhanced 
+            marketplaceService={marketplaceService}
+            onNavigateToMarketplace={() => handleTabSwitch('marketplace')}
+            onNavigateToEscrowMarketplace={() => handleTabSwitch('escrow-marketplace')}
+          />
+        )}
+        {activeTab === 'importer' && !marketplaceService && contractsLoading && (
+          <div className="p-8 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p className="text-gray-600">Connecting to smart contracts...</p>
+            <p className="text-sm text-gray-500 mt-2">This may take a few moments</p>
+          </div>
+        )}
+        {activeTab === 'importer' && !marketplaceService && !contractsLoading && contractsError && (
+          <div className="max-w-4xl mx-auto p-8">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+              <div className="flex items-start space-x-4">
+                <div className="flex-shrink-0">
+                  <svg className="h-12 w-12 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-red-800 mb-2">
+                    ❌ Contract Connection Error
+                  </h3>
+                  <p className="text-red-700 mb-4">
+                    {contractsError}
+                  </p>
+                  <div className="bg-red-100 rounded p-3 mb-4">
+                    <p className="text-sm text-red-900 font-semibold mb-2">Did you restart the dev server?</p>
+                    <p className="text-sm text-red-800">
+                      After updating .env file, you must restart:
+                    </p>
+                    <code className="block bg-red-200 px-3 py-2 rounded mt-2 text-sm">
+                      # Press Ctrl+C, then:<br/>
+                      npm run dev
+                    </code>
+                  </div>
+                  <div className="text-sm text-red-700">
+                    <p className="font-semibold mb-1">Expected configuration:</p>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>VITE_REGISTRY_APP_ID=745508602</li>
+                      <li>VITE_MARKETPLACE_APP_ID=746657437</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        {activeTab === 'importer' && !marketplaceService && !contractsLoading && !contractsError && (
+          <div className="max-w-4xl mx-auto p-8">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+              <div className="flex items-start space-x-4">
+                <div className="flex-shrink-0">
+                  <svg className="h-12 w-12 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-yellow-800 mb-2">
+                    📋 Smart Contracts Not Configured
+                  </h3>
+                  <p className="text-yellow-700 mb-4">
+                    The Importer Dashboard requires smart contracts to be deployed and configured. 
+                    Please complete the following steps:
+                  </p>
+                  <ol className="list-decimal list-inside space-y-2 text-yellow-700 mb-4">
+                    <li>Deploy the <code className="bg-yellow-100 px-2 py-1 rounded">TradeInstrumentRegistry</code> contract</li>
+                    <li>Deploy the <code className="bg-yellow-100 px-2 py-1 rounded">AtomicMarketplaceV3</code> contract</li>
+                    <li>Update your <code className="bg-yellow-100 px-2 py-1 rounded">.env</code> file with the contract app IDs:</li>
+                  </ol>
+                  <div className="bg-yellow-100 rounded p-3 mb-4 font-mono text-sm text-yellow-900">
+                    VITE_REGISTRY_APP_ID=YOUR_REGISTRY_APP_ID<br/>
+                    VITE_MARKETPLACE_APP_ID=YOUR_MARKETPLACE_APP_ID
+                  </div>
+                  <p className="text-yellow-700 text-sm">
+                    After updating the .env file, restart your development server.
+                  </p>
+                  <div className="mt-6 flex space-x-4">
+                    <button
+                      onClick={() => handleTabSwitch('admin')}
+                      className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-md font-medium transition-colors"
+                    >
+                      Go to Admin Panel
+                    </button>
+                    <button
+                      onClick={() => handleTabSwitch('marketplace')}
+                      className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md font-medium transition-colors"
+                    >
+                      Browse Marketplace (Demo)
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         {activeTab === 'financier' && <InvestorDashboard />}
         {activeTab === 'marketplace' && <EnhancedMarketplaceDashboard />}
+        {activeTab === 'escrow-marketplace' && <EscrowV4Marketplace />}
         {activeTab === 'regulator' && <RegulatorDashboard />}
         {activeTab === 'admin' && <AdminDashboard />}
         {activeTab === 'about' && <AboutSection />}

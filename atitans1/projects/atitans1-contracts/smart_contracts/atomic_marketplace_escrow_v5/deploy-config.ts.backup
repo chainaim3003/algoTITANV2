@@ -1,5 +1,5 @@
 import { AlgorandClient } from '@algorandfoundation/algokit-utils'
-import { AtomicMarketplaceEscrowV5Factory } from '../artifacts/atomic_marketplace_escrow_v4/AtomicMarketplaceEscrowV5Client'
+import { AtomicMarketplaceEscrowV5Factory } from '../artifacts/atomic_marketplace_escrow_v5/AtomicMarketplaceEscrowV5Client'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 
@@ -53,10 +53,10 @@ export async function deploy() {
         const globalState = appInfo.params['global-state'] || []
         
         const hasSettlement = globalState.some((item: any) => 
-          Buffer.from(item.key, 'base64').toString() === 'settlement_asset_id'
+          Buffer.from(item.key, 'base64').toString() === 'settlementCurrency'
         )
         const hasTreasury = globalState.some((item: any) => 
-          Buffer.from(item.key, 'base64').toString() === 'treasury_address'
+          Buffer.from(item.key, 'base64').toString() === 'platformTreasury'
         )
         
         if (!hasSettlement || !hasTreasury) {
@@ -87,15 +87,23 @@ export async function deploy() {
       
       // Call initialize using AlgoKit typed client pattern
       console.log('🔧 Calling initialize method...')
-      const initResult = await appClient.send.initialize({
-        settlementAssetId: BigInt(settlementAssetId),
-        treasuryAddress: treasuryAddress,
-      }, {
-        sendParams: {
-          fee: (2000).microAlgo(),
-        },
-      })
-      
+
+
+      // Call initialize using AlgoKit typed client pattern
+        console.log('🔧 Calling initialize method...')
+
+
+const initResult = await appClient.send.initialize({
+  args: {
+    settlementAssetId: BigInt(settlementAssetId),
+    treasuryAddress: treasuryAddress,
+  },
+  sendParams: {
+    fee: (2000).microAlgo(),
+  },
+})
+
+
       console.log(`✅ Contract initialized!`)
       console.log(`📍 Txn ID: ${initResult.transaction.txID()}`)
       
@@ -105,10 +113,10 @@ export async function deploy() {
       const verifyState = verifyInfo.params['global-state'] || []
       
       const settlementSet = verifyState.some((item: any) => 
-        Buffer.from(item.key, 'base64').toString() === 'settlement_asset_id'
+        Buffer.from(item.key, 'base64').toString() === 'settlementCurrency'
       )
       const treasurySet = verifyState.some((item: any) => 
-        Buffer.from(item.key, 'base64').toString() === 'treasury_address'
+        Buffer.from(item.key, 'base64').toString() === 'platformTreasury'
       )
       
       if (settlementSet && treasurySet) {
@@ -131,7 +139,17 @@ export async function deploy() {
     console.log(`   - Regulator Refund: 2.00%`)
     console.log(`   - Marketplace Fee: 0.25%`)
     console.log('')
-    console.log(`🔗 Explorer: https://testnet.explorer.perawallet.app/application/${appId}`)
+    
+    // Detect network from environment
+    const networkName = process.env.ALGOD_SERVER?.includes('testnet') ? 'testnet' : 
+                       process.env.ALGOD_SERVER?.includes('mainnet') ? 'mainnet' : 'localnet'
+    const explorerUrl = networkName === 'mainnet' 
+      ? `https://explorer.perawallet.app/application/${appId}`
+      : networkName === 'testnet'
+      ? `https://testnet.explorer.perawallet.app/application/${appId}`
+      : `https://app.dappflow.org/explorer/application/${appId}`
+    
+    console.log(`🔗 Explorer: ${explorerUrl}`)
     
     // Auto-update contracts.json
     if (needsInit || result.operationPerformed === 'create' || result.operationPerformed === 'replace') {
@@ -147,7 +165,7 @@ export async function deploy() {
           contractsData.active.ESCROW_V5 = {
             appId: appId,
             appAddress: appAddress,
-            network: 'testnet',
+            network: networkName,
             version: '5.0.0',
             deployedAt: new Date().toISOString().split('T')[0],
             status: 'active',
