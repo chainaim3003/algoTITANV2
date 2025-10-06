@@ -28,7 +28,7 @@ interface ImporterDashboardEnhancedProps {
 
 // Default seller/exporter address
 const DEFAULT_SELLER_EXPORTER = 'EWYZFEJLQOZV25XLSMU5TSNPU3LY4U36IWDPSRQXOKWYBOLFZEXEB6UNWE'
-const DEFAULT_SELLER_NAME = 'SREE PALANI ANDAVAR AGROS PRIVATE LIMITED'
+const DEFAULT_SELLER_NAME = 'Jupiter Knitting Company'
 
 // Product types
 const PRODUCT_TYPES = [
@@ -71,7 +71,7 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
 }) => {
   const { contracts } = useContracts()
   const { activeAddress, signTransactions } = useWallet()
-  const [currentTab, setCurrentTab] = useState<'purchases' | 'create-trade'>('purchases')
+  const [currentTab, setCurrentTab] = useState<'purchases' | 'create-trade'>('create-trade')
   
   // Purchases state - NO MOCK DATA
   const [purchasedInstruments, setPurchasedInstruments] = useState<TradeInstrument[]>([])
@@ -97,6 +97,10 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
   const [createdTxId, setCreatedTxId] = useState<string | null>(null)
   const [isLoadingVLEI, setIsLoadingVLEI] = useState(false) // NEW: Loading state for vLEI
   const [vLEILoaded, setVLEILoaded] = useState(false) // NEW: Track if vLEI is loaded
+  const [isLoadingImporterVLEI, setIsLoadingImporterVLEI] = useState(false) // Loading state for importer vLEI
+  const [importerVLEIData, setImporterVLEIData] = useState<string>('') // Store vLEI JSON response
+  const [isLoadingSellerVLEI, setIsLoadingSellerVLEI] = useState(false) // Loading state for seller vLEI
+  const [sellerVLEIData, setSellerVLEIData] = useState<string>('') // Store seller vLEI JSON response
 
   // Load account assets and purchases from blockchain
   useEffect(() => {
@@ -283,6 +287,78 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
   }
 
   /**
+   * Fetch vLEI data for the importer from GLEIF API
+   */
+  const handleGetImporterVLEI = async () => {
+    setIsLoadingImporterVLEI(true)
+    setError('')
+    
+    try {
+      console.log('🔍 Fetching vLEI data for importer...')
+      
+      // TODO: Replace with actual REST URL
+      const VLEI_API_URL = 'https://api.gleif.org/api/v1/lei-records?filter[entity.legalName]=TOMMY+HILFIGER+EUROPE+B.V.'
+      
+      const response = await fetch(VLEI_API_URL)
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      
+      // Store the JSON response as formatted string
+      setImporterVLEIData(JSON.stringify(data, null, 2))
+      
+      showSuccess('✅ vLEI data retrieved successfully!')
+      console.log('✅ vLEI data fetched:', data)
+      
+    } catch (error) {
+      console.error('❌ Error fetching vLEI data:', error)
+      showError(`Failed to fetch vLEI data: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      setImporterVLEIData('')
+    } finally {
+      setIsLoadingImporterVLEI(false)
+    }
+  }
+
+  /**
+   * Fetch vLEI data for the seller/exporter
+   */
+  const handleGetSellerVLEI = async () => {
+    setIsLoadingSellerVLEI(true)
+    setError('')
+    
+    try {
+      console.log('🔍 Fetching vLEI data for seller/exporter...')
+      
+      // TODO: Replace with actual REST URL for Jupiter Knitting Company
+      const VLEI_API_URL = 'https://api.gleif.org/api/v1/lei-records?filter[entity.legalName]=Jupiter+Knitting+Company'
+      
+      const response = await fetch(VLEI_API_URL)
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      
+      // Store the JSON response as formatted string
+      setSellerVLEIData(JSON.stringify(data, null, 2))
+      
+      showSuccess('✅ Seller vLEI data retrieved successfully!')
+      console.log('✅ Seller vLEI data fetched:', data)
+      
+    } catch (error) {
+      console.error('❌ Error fetching seller vLEI data:', error)
+      showError(`Failed to fetch seller vLEI data: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      setSellerVLEIData('')
+    } finally {
+      setIsLoadingSellerVLEI(false)
+    }
+  }
+
+  /**
    * Create new trade in Escrow V4 - Called by BUYER
    * This creates a trade listing that can be funded by Buyer or Financier
    */
@@ -409,6 +485,95 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
         <p className="text-gray-600 mt-2">Manage blockchain purchases and create new trades</p>
       </div>
 
+      {/* Importer Information Section */}
+      <div className="mb-6 bg-white border border-gray-200 rounded-lg shadow-sm">
+        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900">Importer Information</h2>
+          <button
+            onClick={handleGetImporterVLEI}
+            disabled={isLoadingImporterVLEI}
+            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+              isLoadingImporterVLEI
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
+          >
+            {isLoadingImporterVLEI ? (
+              <span className="flex items-center">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Loading...
+              </span>
+            ) : (
+              'Get vLEI'
+            )}
+          </button>
+        </div>
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Company Name */}
+            <div>
+              <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Company Name</label>
+              <p className="text-sm font-semibold text-gray-900">TOMMY HILFIGER EUROPE B.V.</p>
+            </div>
+            
+            {/* LEI */}
+            <div>
+              <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Legal Entity Identifier (LEI)</label>
+              <p className="text-sm font-mono font-semibold text-blue-600">54930012QJWZMYHNJW95</p>
+            </div>
+            
+            {/* Legal Address */}
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Legal Address</label>
+              <p className="text-sm text-gray-900">
+                DANZIGERKADE 165<br />
+                AMSTERDAM, NL-NH 1013 AP<br />
+                Netherlands
+              </p>
+            </div>
+            
+            {/* Registration Details */}
+            <div>
+              <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Registration Number</label>
+              <p className="text-sm text-gray-900">33290078</p>
+            </div>
+            
+            <div>
+              <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Status</label>
+              <p className="text-sm">
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  ✓ ACTIVE
+                </span>
+              </p>
+            </div>
+          </div>
+          
+          {/* vLEI JSON Response Text Area */}
+          {importerVLEIData && (
+            <div className="mt-6">
+              <label className="block text-xs font-medium text-gray-500 uppercase mb-2">vLEI JSON Response</label>
+              <textarea
+                value={importerVLEIData}
+                readOnly
+                rows={8}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg font-mono text-xs bg-gray-50 text-gray-800"
+              />
+              <div className="mt-2 flex justify-end">
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(importerVLEIData);
+                    showSuccess('JSON copied to clipboard!');
+                  }}
+                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  Copy to Clipboard
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Success/Error Messages */}
       {success && (
         <div className="mb-6 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg">
@@ -488,16 +653,6 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
       <div className="mb-8 border-b border-gray-200">
         <nav className="flex space-x-8">
           <button
-            onClick={() => setCurrentTab('purchases')}
-            className={`pb-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-              currentTab === 'purchases'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            📦 My Purchases ({purchasedInstruments.length})
-          </button>
-          <button
             onClick={() => setCurrentTab('create-trade')}
             className={`pb-4 px-1 border-b-2 font-medium text-sm transition-colors ${
               currentTab === 'create-trade'
@@ -506,6 +661,16 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
             }`}
           >
             ➕ Create Trade
+          </button>
+          <button
+            onClick={() => setCurrentTab('purchases')}
+            className={`pb-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+              currentTab === 'purchases'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            📦 My Purchases ({purchasedInstruments.length})
           </button>
         </nav>
       </div>
@@ -620,9 +785,54 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
                 placeholder="Company name of the seller/exporter"
                 required
               />
-              <p className="mt-1 text-xs text-gray-500">
-                Default: {DEFAULT_SELLER_NAME}
-              </p>
+              <div className="mt-2 flex items-center gap-2">
+                <p className="text-base text-gray-600" style={{fontSize: '1.1em'}}>
+                  Default: {DEFAULT_SELLER_NAME}
+                </p>
+                <button
+                  type="button"
+                  onClick={handleGetSellerVLEI}
+                  disabled={isLoadingSellerVLEI}
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                    isLoadingSellerVLEI
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                  }`}
+                >
+                  {isLoadingSellerVLEI ? (
+                    <span className="flex items-center">
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></div>
+                      Loading...
+                    </span>
+                  ) : (
+                    'Get vLEI'
+                  )}
+                </button>
+              </div>
+              {/* Seller vLEI JSON Response */}
+              {sellerVLEIData && (
+                <div className="mt-3">
+                  <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Seller vLEI JSON Response</label>
+                  <textarea
+                    value={sellerVLEIData}
+                    readOnly
+                    rows={6}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg font-mono text-xs bg-gray-50 text-gray-800"
+                  />
+                  <div className="mt-1 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(sellerVLEIData);
+                        showSuccess('Seller JSON copied to clipboard!');
+                      }}
+                      className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      Copy to Clipboard
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Seller/Exporter Address (Merged Field) */}
@@ -725,7 +935,7 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
               </p>
             </div>
 
-            {/* Purchase Order - NEW: Changed label and added vLEI button */}
+            {/* Purchase Order - NEW: File upload + Get vLEI PO button + JSON response */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Purchase Order *
@@ -742,7 +952,7 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
                 </div>
               )}
               
-              {/* Upload Area and vLEI Button */}
+              {/* File Upload Area */}
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-green-500 transition-colors">
                 <input
                   type="file"
@@ -763,45 +973,53 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
                     {uploadedFileName && !vLEILoaded ? 'Click to change file' : 'Click to select a JSON file'}
                   </div>
                 </label>
-                
-                {/* NEW: GET vLEI Endorsement Button - Small Button */}
-                <div className="flex justify-center">
-                  <button
-                    type="button"
-                    onClick={handleLoadVLEIPO}
-                    disabled={isLoadingVLEI}
-                    className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                      vLEILoaded
-                        ? 'bg-green-100 text-green-700 border border-green-300'
-                        : 'bg-purple-50 text-purple-700 border border-purple-300 hover:bg-purple-100'
-                    } ${isLoadingVLEI ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    {isLoadingVLEI ? (
-                      <span className="flex items-center">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600 mr-2"></div>
-                        Loading...
-                      </span>
-                    ) : (
-                      <span className="flex items-center">
-                        {vLEILoaded ? (
-                          <>
-                            <span className="mr-2">✓</span>
-                            vLEI Endorsement Loaded
-                          </>
-                        ) : (
-                          <>
-                            <span className="mr-2">🔐</span>
-                            GET vLEI for {formData.productType}
-                          </>
-                        )}
-                      </span>
-                    )}
-                  </button>
-                </div>
               </div>
 
+              {/* Get vLEI PO Button */}
+              <div className="mt-3 flex justify-center">
+                <button
+                  type="button"
+                  onClick={handleLoadVLEIPO}
+                  className="px-4 py-2 text-sm font-medium rounded-md transition-colors bg-purple-600 text-white hover:bg-purple-700"
+                >
+                  {isLoadingVLEI ? (
+                    <span className="flex items-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Loading...
+                    </span>
+                  ) : (
+                    'Get vLEI PO'
+                  )}
+                </button>
+              </div>
+
+              {/* vLEI PO JSON Response Text Area */}
+              {vLEILoaded && formData.vLEIEndorsedPO && (
+                <div className="mt-3">
+                  <label className="block text-xs font-medium text-gray-500 uppercase mb-1">vLEI PO JSON Response</label>
+                  <textarea
+                    value={JSON.stringify(formData.vLEIEndorsedPO, null, 2)}
+                    readOnly
+                    rows={8}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg font-mono text-xs bg-gray-50 text-gray-800"
+                  />
+                  <div className="mt-1 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(JSON.stringify(formData.vLEIEndorsedPO, null, 2));
+                        showSuccess('vLEI PO JSON copied to clipboard!');
+                      }}
+                      className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      Copy to Clipboard
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <p className="mt-2 text-xs text-gray-500">
-                Upload a JSON file or load the vLEI endorsement. vLEI endorsements will be stored in box storage on-chain.
+                Upload a JSON file or click "Get vLEI PO" to load a vLEI-endorsed purchase order. vLEI endorsements will be stored in box storage on-chain.
               </p>
             </div>
 

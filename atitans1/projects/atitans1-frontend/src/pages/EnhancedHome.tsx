@@ -23,7 +23,7 @@ import { MarketplaceService } from '../services/MarketplaceService';
 // import UniversalRoleSwitcher from '../components/universal/UniversalRoleSwitcher';
 import BLAPITest from '../components/BLAPITest';
 
-type TabType = 'home' | 'exporter' | 'carrier' | 'importer' | 'financier' | 'marketplace' | 'escrow-marketplace' | 'regulator' | 'admin' | 'about' | 'proxy-test' | 'api-test';
+type TabType = 'home' | 'exporter' | 'carrier' | 'importer' | 'financier' | 'marketplace' | 'escrow-marketplace' | 'regulator' | 'admin' | 'about';
 
 export default function EnhancedHome() {
   const [activeTab, setActiveTab] = useState<TabType>('home');
@@ -150,7 +150,7 @@ export default function EnhancedHome() {
         <div className="container mx-auto px-4 py-16">
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-5xl font-bold text-gray-900 mb-6">
-              Welcome to <span className={`${isLocalNet ? 'text-red-600' : 'text-blue-600'}`}>Algo Titans</span>
+              Welcome to <span className={`${isLocalNet ? 'text-red-600' : 'text-blue-600'}`}>Algo <span style={{letterSpacing: '0.3em'}}>TITAN</span></span>
             </h1>
             <p className="text-xl text-gray-600 mb-8">
               Revolutionary RWA Tokenization with Enhanced Bills of Lading
@@ -235,8 +235,8 @@ export default function EnhancedHome() {
             {/* First Row - Title + Main Navigation + Account Info */}
             <div className="flex items-center mb-2">
               {/* Left: Title */}
-              <h1 className="text-xl font-bold text-gray-900 mr-8">
-                Algo Titans
+              <h1 className="text-2xl font-bold text-gray-900 mr-8">
+                Algo TITAN
               </h1>
 
               {/* Center: Main Navigation */}
@@ -244,7 +244,7 @@ export default function EnhancedHome() {
                 <div className="flex space-x-2">
                   <button
                     onClick={() => handleTabSwitch('home')}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'home'
+                    className={`px-4 py-2.5 rounded-md text-base font-medium transition-colors ${activeTab === 'home'
                       ? 'bg-blue-100 text-blue-700'
                       : 'text-gray-500 hover:text-gray-700'
                       }`}
@@ -253,7 +253,7 @@ export default function EnhancedHome() {
                   </button>
                   <button
                     onClick={() => handleTabSwitch('marketplace')}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'marketplace'
+                    className={`px-4 py-2.5 rounded-md text-base font-medium transition-colors ${activeTab === 'marketplace'
                       ? 'bg-blue-100 text-blue-700'
                       : 'text-gray-500 hover:text-gray-700'
                       }`}
@@ -262,16 +262,16 @@ export default function EnhancedHome() {
                   </button>
                   <button
                     onClick={() => handleTabSwitch('escrow-marketplace')}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'escrow-marketplace'
+                    className={`px-4 py-2.5 rounded-md text-base font-medium transition-colors ${activeTab === 'escrow-marketplace'
                       ? 'bg-purple-100 text-purple-700'
                       : 'text-gray-500 hover:text-gray-700'
                       }`}
                   >
-                    💰 Escrow V5
+                    💰 Marketplace&EscrowV5
                   </button>
                   <button
                     onClick={() => handleTabSwitch('admin')}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'admin'
+                    className={`px-4 py-2.5 rounded-md text-base font-medium transition-colors ${activeTab === 'admin'
                       ? 'bg-red-100 text-red-700'
                       : 'text-gray-500 hover:text-gray-700'
                       }`}
@@ -280,30 +280,12 @@ export default function EnhancedHome() {
                   </button>
                   <button
                     onClick={() => handleTabSwitch('about')}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'about'
+                    className={`px-4 py-2.5 rounded-md text-base font-medium transition-colors ${activeTab === 'about'
                       ? 'bg-blue-100 text-blue-700'
                       : 'text-gray-500 hover:text-gray-700'
                       }`}
                   >
                     ℹ️ About
-                  </button>
-                  <button
-                    onClick={() => handleTabSwitch('proxy-test')}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'proxy-test'
-                      ? 'bg-yellow-100 text-yellow-700'
-                      : 'text-gray-500 hover:text-gray-700'
-                      }`}
-                  >
-                    🔧 Proxy Test
-                  </button>
-                  <button
-                    onClick={() => handleTabSwitch('api-test')}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'api-test'
-                      ? 'bg-green-100 text-green-700'
-                      : 'text-gray-500 hover:text-gray-700'
-                      }`}
-                  >
-                    🧪 API Test
                   </button>
                 </div>
               </div>
@@ -322,7 +304,7 @@ export default function EnhancedHome() {
             <div className="flex justify-center space-x-2 mb-2">
               <button
                 onClick={() => handleTabSwitch('exporter')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'exporter'
+                className={`px-4 py-2.5 rounded-md text-base font-medium transition-colors ${activeTab === 'exporter'
                   ? 'bg-blue-100 text-blue-700'
                   : 'text-gray-500 hover:text-gray-700'
                   }`}
@@ -331,7 +313,7 @@ export default function EnhancedHome() {
               </button>
               <button
                 onClick={() => handleTabSwitch('carrier')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'carrier'
+                className={`px-4 py-2.5 rounded-md text-base font-medium transition-colors ${activeTab === 'carrier'
                   ? 'bg-blue-100 text-blue-700'
                   : 'text-gray-500 hover:text-gray-700'
                   }`}
@@ -341,7 +323,7 @@ export default function EnhancedHome() {
 
               <button
                 onClick={() => handleTabSwitch('importer')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'importer'
+                className={`px-4 py-2.5 rounded-md text-base font-medium transition-colors ${activeTab === 'importer'
                   ? 'bg-green-100 text-green-700'
                   : 'text-gray-500 hover:text-gray-700'
                   }`}
@@ -351,7 +333,7 @@ export default function EnhancedHome() {
 
               <button
                 onClick={() => handleTabSwitch('financier')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'financier'
+                className={`px-4 py-2.5 rounded-md text-base font-medium transition-colors ${activeTab === 'financier'
                   ? 'bg-purple-100 text-purple-700'
                   : 'text-gray-500 hover:text-gray-700'
                   }`}
@@ -361,7 +343,7 @@ export default function EnhancedHome() {
 
               <button
                 onClick={() => handleTabSwitch('regulator')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'regulator'
+                className={`px-4 py-2.5 rounded-md text-base font-medium transition-colors ${activeTab === 'regulator'
                   ? 'bg-blue-100 text-blue-700'
                   : 'text-gray-500 hover:text-gray-700'
                   }`}
@@ -616,8 +598,9 @@ function HomeSection() {
               Powered by Algorand • Fully Regulated
             </div>
             <h1 className="text-4xl font-bold tracking-tight sm:text-6xl lg:text-7xl text-balance mx-auto">
-              <span className="text-blue-600 tracking-widest">Algo Titans</span>
-              <br />
+              <span className="text-blue-600">Algo <span style={{letterSpacing: '0.3em'}}>TITAN</span></span>
+            </h1>
+            <h2 className="text-xl sm:text-2xl text-gray-600 mt-4 mb-8">
               <span className="text-2xl sm:text-3xl lg:text-4xl font-medium text-gray-600 block mt-2">
                 Trade Intelligence & Tokenized Asset Network
               </span>
@@ -625,7 +608,7 @@ function HomeSection() {
               <span className="text-blue-600 leading-6 text-lg sm:text-xl text-balance max-w-2xl mx-auto block mt-4">
                 Unlock Web3 for Your Small Business Working Capital
               </span>
-            </h1>
+            </h2>
             <div className="mt-8 max-w-3xl mx-auto">
               <ul className="text-lg leading-8 text-gray-600 text-left space-y-4 max-w-2xl mx-auto">
                 <li className="flex items-start gap-3">
@@ -1576,13 +1559,13 @@ function CTASection() {
   );
 }
 
-function FooterSection() { return <footer className="border-t bg-gray-100"><div className="container mx-auto py-12 px-4 text-center"><p>&copy; 2024 Algo Titans</p></div></footer>; }
+function FooterSection() { return <footer className="border-t bg-gray-100"><div className="container mx-auto py-12 px-4 text-center"><p>&copy; 2024 Algo <span style={{letterSpacing: '0.3em'}}>TITAN</span></p></div></footer>; }
 
 function AboutSection() {
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-8">
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">About Algo Titans</h1>
+        <h1 className="text-4xl font-bold text-gray-900 mb-4">About Algo <span style={{letterSpacing: '0.3em'}}>TITAN</span></h1>
         <p className="text-xl text-gray-600">Revolutionary RWA Tokenization Platform for Trade Finance</p>
       </div>
       <div className="bg-white p-6 rounded-lg shadow">
