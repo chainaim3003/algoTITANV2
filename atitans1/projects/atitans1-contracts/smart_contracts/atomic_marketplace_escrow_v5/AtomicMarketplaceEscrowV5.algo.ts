@@ -162,6 +162,17 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
   }
 
   /**
+   * Manually set nextTradeId (admin only - for fixing counter issues)
+   */
+  @abimethod()
+  public setNextTradeId(newId: uint64): boolean {
+    assert(Txn.sender === Global.creatorAddress, 'Only creator can set nextTradeId')
+    assert(newId > 0, 'Trade ID must be positive')
+    this.nextTradeId.value = newId
+    return true
+  }
+
+  /**
    * Helper: Check if using ALGO
    */
   private isAlgoPayment(): boolean {

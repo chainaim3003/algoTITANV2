@@ -9,6 +9,8 @@ import { MarketplaceService } from '../services/MarketplaceService'
 import { useContracts } from '../hooks/useContracts'
 import { useWallet } from '@txnlab/use-wallet-react'
 import algosdk from 'algosdk'
+import { ConversionInfoBox } from './DemoCurrencyDisplay'
+import { formatUsd, formatAlgo, usdToAlgo } from '../utils/demoCurrencyConverter'
 
 interface ImporterDashboardProps {
   marketplaceService: MarketplaceService
@@ -136,6 +138,9 @@ export const ImporterDashboard: React.FC<ImporterDashboardProps> = ({
         <p className="text-gray-600 mt-2">Manage your purchased trade instruments</p>
       </div>
 
+      {/* Demo Currency Info */}
+      <ConversionInfoBox className="mb-8" />
+
       {/* Quick Actions */}
       <div className="mb-8">
         <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-6 text-white">
@@ -205,11 +210,11 @@ export const ImporterDashboard: React.FC<ImporterDashboardProps> = ({
               </div>
               <div className="text-center">
                 <p className="text-2xl font-bold text-gray-900">
-                  ${formatCurrency(
-                    purchasedInstruments.reduce((sum, inst) => sum + inst.cargoValue, 0n)
+                  {formatUsd(
+                    purchasedInstruments.reduce((sum, inst) => Number(sum) + Number(inst.cargoValue), 0)
                   )}
                 </p>
-                <p className="text-sm text-gray-500">Total Cargo Value</p>
+                <p className="text-sm text-gray-500">Total Cargo Value (USD)</p>
               </div>
               <div className="text-center">
                 <p className="text-2xl font-bold text-gray-900">
@@ -296,11 +301,29 @@ const PurchasedInstrumentCard: React.FC<{
           <p className="text-sm text-gray-600">{instrument.cargoDescription}</p>
         </div>
         
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <span className="font-medium text-gray-700">Value:</span>
-            <p className="text-gray-600">${formatCurrency(instrument.cargoValue)}</p>
+        {/* Dual Currency Value Display */}
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 mb-4 border border-blue-200">
+          <div className="text-xs font-semibold text-gray-600 mb-2">CARGO VALUE</div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="text-xs text-gray-500 mb-1">USD Amount</div>
+              <div className="text-lg font-bold text-gray-900">
+                {formatUsd(Number(instrument.cargoValue))}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 mb-1">ALGO Settlement</div>
+              <div className="text-lg font-bold text-blue-600">
+                {formatAlgo(usdToAlgo(Number(instrument.cargoValue)))}
+              </div>
+            </div>
           </div>
+          <div className="text-xs text-gray-500 mt-2 italic text-center">
+            Demo rate: $100k USD = 1 ALGO
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 text-sm mb-4">
           <div>
             <span className="font-medium text-gray-700">Risk Score:</span>
             <p className={getRiskColor(instrument.riskScore)}>

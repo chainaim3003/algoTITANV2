@@ -2,6 +2,7 @@
  * Trade Instrument Registry V3 Client
  * 
  * Client for interacting with the TradeInstrumentRegistry smart contract
+ * FIXED: Using official AlgoKit pattern with single config parameter
  */
 import { AlgorandClient } from '@algorandfoundation/algokit-utils'
 
@@ -13,8 +14,7 @@ export class TradeInstrumentRegistryClient {
       id?: number
       creatorAddress?: string
       sender?: any
-    },
-    private algorand: AlgorandClient
+    }
   ) {}
 
   async getGlobalState() {

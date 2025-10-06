@@ -69,7 +69,7 @@ async function checkPrerequisites() {
       console.log(`   📝 Deployer Address: ${deployer.addr}`)
       
       const accountInfo = await algorand.client.algod.accountInformation(deployer.addr).do()
-      const balance = accountInfo.amount / 1_000_000
+      const balance = Number(accountInfo.amount) / 1_000_000
       console.log(`   💰 Balance: ${balance.toFixed(6)} ALGO`)
       
       if (balance >= 1.0) {
@@ -92,11 +92,13 @@ async function checkPrerequisites() {
   console.log('5️⃣  Checking compiled contracts...')
   const artifactsPath = path.join(__dirname, '..', 'smart_contracts', 'artifacts', 'atomic_marketplace_escrow_v5')
   if (fs.existsSync(artifactsPath)) {
-    const approvalPath = path.join(artifactsPath, 'approval.teal')
-    const clearPath = path.join(artifactsPath, 'clear.teal')
+    const approvalPath = path.join(artifactsPath, 'AtomicMarketplaceEscrowV5.approval.teal')
+    const clearPath = path.join(artifactsPath, 'AtomicMarketplaceEscrowV5.clear.teal')
     
     if (fs.existsSync(approvalPath) && fs.existsSync(clearPath)) {
       console.log('   ✅ Compiled contract artifacts found')
+      console.log(`   📄 Approval: ${path.basename(approvalPath)}`)
+      console.log(`   📄 Clear: ${path.basename(clearPath)}`)
     } else {
       console.log('   ⚠️  Contract artifacts incomplete')
       console.log('   💡 Run: npm run build')

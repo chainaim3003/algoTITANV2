@@ -80,24 +80,18 @@ export const useContracts = (): UseContractsResult => {
         algorand = AlgorandClient.mainNet()
       }
 
-      // Initialize contract clients
-      const registryClient = new TradeInstrumentRegistryClient(
-        {
-          algorand,
-          resolveBy: 'id',
-          id: config.contracts.registry
-        },
-        algorand
-      )
+      // Initialize contract clients using official AlgoKit pattern
+      const registryClient = new TradeInstrumentRegistryClient({
+        algorand,
+        resolveBy: 'id',
+        id: config.contracts.registry
+      })
 
-      const marketplaceClient = new AtomicMarketplaceV3Client(
-        {
-          algorand,
-          resolveBy: 'id',
-          id: config.contracts.marketplace
-        },
-        algorand
-      )
+      const marketplaceClient = new AtomicMarketplaceV3Client({
+        algorand,
+        resolveBy: 'id',
+        id: config.contracts.marketplace
+      })
 
       // Test contract connectivity
       try {

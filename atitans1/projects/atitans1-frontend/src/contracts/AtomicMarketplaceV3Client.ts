@@ -3,6 +3,8 @@
  * 
  * Client for interacting with the AtomicMarketplaceV3 smart contract
  * NO MOCKS - Only real blockchain transactions
+ * 
+ * FIXED: Using official AlgoKit pattern with single config parameter
  */
 import { AlgorandClient } from '@algorandfoundation/algokit-utils'
 import algosdk from 'algosdk'
@@ -19,8 +21,7 @@ export class AtomicMarketplaceV3Client {
       id?: number
       creatorAddress?: string
       sender?: any
-    },
-    private algorand: AlgorandClient
+    }
   ) {
     this.appId = config.id || 0
     if (this.appId > 0) {
@@ -33,7 +34,7 @@ export class AtomicMarketplaceV3Client {
       throw new Error('Marketplace app ID not set')
     }
     
-    const client = this.algorand.client.algod
+    const client = this.config.algorand.client.algod
     const appInfo = await client.getApplicationByID(this.appId).do()
     
     // Parse global state
@@ -55,7 +56,7 @@ export class AtomicMarketplaceV3Client {
     usdcAssetId: number
     signer: (txns: algosdk.Transaction[], indexesToSign?: number[]) => Promise<(Uint8Array | null)[]>
   }) {
-    const client = this.algorand.client.algod
+    const client = this.config.algorand.client.algod
     const suggestedParams = await client.getTransactionParams().do()
     
     const appCallTxn = algosdk.makeApplicationCallTxnFromObject({
@@ -90,7 +91,7 @@ export class AtomicMarketplaceV3Client {
     listingType: bigint
     signer: (txns: algosdk.Transaction[], indexesToSign?: number[]) => Promise<(Uint8Array | null)[]>
   }) {
-    const client = this.algorand.client.algod
+    const client = this.config.algorand.client.algod
     const suggestedParams = await client.getTransactionParams().do()
     
     const appCallTxn = algosdk.makeApplicationCallTxnFromObject({
@@ -127,7 +128,7 @@ export class AtomicMarketplaceV3Client {
     payment: algosdk.Transaction
     signer: (txns: algosdk.Transaction[], indexesToSign?: number[]) => Promise<(Uint8Array | null)[]>
   }) {
-    const client = this.algorand.client.algod
+    const client = this.config.algorand.client.algod
     const suggestedParams = await client.getTransactionParams().do()
     
     const appCallTxn = algosdk.makeApplicationCallTxnFromObject({
@@ -160,7 +161,7 @@ export class AtomicMarketplaceV3Client {
     usdcTransfer: algosdk.Transaction
     signer: (txns: algosdk.Transaction[], indexesToSign?: number[]) => Promise<(Uint8Array | null)[]>
   }) {
-    const client = this.algorand.client.algod
+    const client = this.config.algorand.client.algod
     const suggestedParams = await client.getTransactionParams().do()
     
     const appCallTxn = algosdk.makeApplicationCallTxnFromObject({
@@ -193,7 +194,7 @@ export class AtomicMarketplaceV3Client {
       throw new Error('Marketplace app ID not set')
     }
     
-    const client = this.algorand.client.algod
+    const client = this.config.algorand.client.algod
     
     // Query box storage for listing data
     const boxName = `listing_${params.listingId}`
@@ -229,7 +230,7 @@ export class AtomicMarketplaceV3Client {
       throw new Error('Marketplace app ID not set')
     }
     
-    const client = this.algorand.client.algod
+    const client = this.config.algorand.client.algod
     
     // Query box storage for sale data
     const boxName = `sale_${params.saleId}`
@@ -269,7 +270,7 @@ export class AtomicMarketplaceV3Client {
     listingId: bigint
     signer: (txns: algosdk.Transaction[], indexesToSign?: number[]) => Promise<(Uint8Array | null)[]>
   }) {
-    const client = this.algorand.client.algod
+    const client = this.config.algorand.client.algod
     const suggestedParams = await client.getTransactionParams().do()
     
     const appCallTxn = algosdk.makeApplicationCallTxnFromObject({
@@ -299,7 +300,7 @@ export class AtomicMarketplaceV3Client {
     bidPriceUSDC?: bigint
     signer: (txns: algosdk.Transaction[], indexesToSign?: number[]) => Promise<(Uint8Array | null)[]>
   }) {
-    const client = this.algorand.client.algod
+    const client = this.config.algorand.client.algod
     const suggestedParams = await client.getTransactionParams().do()
     
     const appCallTxn = algosdk.makeApplicationCallTxnFromObject({
@@ -330,7 +331,7 @@ export class AtomicMarketplaceV3Client {
     bidId: bigint
     signer: (txns: algosdk.Transaction[], indexesToSign?: number[]) => Promise<(Uint8Array | null)[]>
   }) {
-    const client = this.algorand.client.algod
+    const client = this.config.algorand.client.algod
     const suggestedParams = await client.getTransactionParams().do()
     
     const appCallTxn = algosdk.makeApplicationCallTxnFromObject({
@@ -357,7 +358,7 @@ export class AtomicMarketplaceV3Client {
   async withdrawFees(params: {
     signer: (txns: algosdk.Transaction[], indexesToSign?: number[]) => Promise<(Uint8Array | null)[]>
   }) {
-    const client = this.algorand.client.algod
+    const client = this.config.algorand.client.algod
     const suggestedParams = await client.getTransactionParams().do()
     
     const appCallTxn = algosdk.makeApplicationCallTxnFromObject({

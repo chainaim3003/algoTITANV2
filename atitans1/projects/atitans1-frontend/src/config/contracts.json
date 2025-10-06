@@ -5,9 +5,9 @@
       "appAddress": "O5PNOOQQXP3FR2PYWJQ7TY5FFEUSMXENLFRIFEY6RBDBHPDDJUC4BWDBJ4",
       "network": "testnet",
       "version": "5.0.0",
-      "deployedAt": "2025-10-02",
+      "deployedAt": "2025-10-06",
       "status": "active",
-      "description": "Clean deployment with fixed box encoding",
+      "description": "Redeployed with initialization - production ready",
       "contractName": "AtomicMarketplaceEscrowV5"
     },
     "MARKETPLACE_V3": {
@@ -48,7 +48,7 @@
       "network": "testnet",
       "version": "4.0.0",
       "deployedAt": "2025-01-03",
-      "deprecatedAt": "2025-10-02",
+      "deprecatedAt": "2025-10-06",
       "status": "deprecated",
       "description": "Deprecated - has orphaned boxes from encoding issues",
       "contractName": "AtomicMarketplaceEscrowV4",

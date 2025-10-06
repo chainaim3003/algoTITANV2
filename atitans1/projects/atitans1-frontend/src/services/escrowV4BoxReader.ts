@@ -9,6 +9,9 @@ import { getActiveEscrowContract } from '../config/contracts'
 
 const { appId: ESCROW_APP_ID } = getActiveEscrowContract()
 
+// Log which contract we're reading from
+console.log('📦 EscrowBoxReader initialized with App ID:', ESCROW_APP_ID)
+
 // Create Algod client
 const algodClient = new algosdk.Algodv2(
   '',
@@ -103,10 +106,8 @@ export class EscrowV4BoxReader {
       
       // Decode ARC4 struct (TradeEscrow)
       // Format: [uint64, Address, Address, Address, uint64, uint64, uint64, uint64, uint64, uint64, Address, uint64, uint64, uint64]
+      // NO tuple prefix - data starts directly with fields
       let offset = 0
-
-      // Skip ARC4 tuple prefix (2 bytes)
-      offset += 2
 
       const tradeId_decoded = data.readBigUInt64BE(offset)
       offset += 8
@@ -186,27 +187,37 @@ export class EscrowV4BoxReader {
       const data = Buffer.from(boxValue.value)
       
       // Decode ARC4 struct (TradeMetadata)
-      // Format: [String, String, String, String, String, String]
+      // WORKAROUND: The data has an anomaly where the first string is at byte 14 
+      // but not in the offset table. We'll read it manually then use offsets for the rest.
       let offset = 0
 
-      // Skip ARC4 tuple prefix (2 bytes)
+      // Skip tuple header (2 bytes)
       offset += 2
 
-      // Helper to read ARC4 string
-      const readString = (): string => {
-        const length = data.readUInt16BE(offset)
+      // Read 6 offsets (2 bytes each)
+      const offsets: number[] = []
+      for (let i = 0; i < 6; i++) {
+        offsets.push(data.readUInt16BE(offset))
         offset += 2
-        const str = data.subarray(offset, offset + length).toString('utf8')
-        offset += length
-        return str
       }
 
-      const productType = readString()
-      const description = readString()
-      const ipfsHash = readString()
-      const leiId = readString()
-      const leiName = readString()
-      const instrumentNumber = readString()
+      // Now at byte 14 - read first string manually (productType)
+      const productTypeLen = data.readUInt16BE(14)
+      const productType = data.subarray(16, 16 + productTypeLen).toString('utf8')
+
+      // Use offsets for remaining strings
+      const readStringAt = (offsetValue: number): string => {
+        if (offsetValue >= data.length) return ''
+        const strLen = data.readUInt16BE(offsetValue)
+        if (strLen === 0 || offsetValue + 2 + strLen > data.length) return ''
+        return data.subarray(offsetValue + 2, offsetValue + 2 + strLen).toString('utf8')
+      }
+
+      const description = readStringAt(offsets[0]) // offset 0 -> "Food Description"
+      const ipfsHash = readStringAt(offsets[1])    // offset 1 -> IPFS hash
+      const leiId = readStringAt(offsets[2])       // offset 2 -> empty
+      const leiName = readStringAt(offsets[3])     // offset 3 -> empty
+      const instrumentNumber = readStringAt(offsets[4]) // offset 4 -> empty
 
       return {
         productType,
@@ -227,23 +238,32 @@ export class EscrowV4BoxReader {
    */
   async getAllTrades(): Promise<Array<{ trade: EscrowTrade; metadata: TradeMetadata }>> {
     try {
+      console.log('📡 Fetching all trades from App ID:', ESCROW_APP_ID)
       const nextTradeId = await this.getNextTradeId()
+      console.log('📊 Next Trade ID:', nextTradeId)
+      console.log(`🔍 Will scan for trades: 1 to ${nextTradeId - 1}`)
+      
       const results: Array<{ trade: EscrowTrade; metadata: TradeMetadata }> = []
 
       for (let tradeId = 1; tradeId < nextTradeId; tradeId++) {
+        console.log(`  Fetching trade #${tradeId}...`)
         const [trade, metadata] = await Promise.all([
           this.getTrade(tradeId),
           this.getTradeMetadata(tradeId)
         ])
 
         if (trade && metadata) {
+          console.log(`  ✅ Trade #${tradeId} found`)
           results.push({ trade, metadata })
+        } else {
+          console.log(`  ⚠️ Trade #${tradeId} not found or incomplete`)
         }
       }
 
+      console.log(`✅ Total trades loaded: ${results.length}`)
       return results
     } catch (error) {
-      console.error('Error getting all trades:', error)
+      console.error('❌ Error getting all trades:', error)
       return []
     }
   }

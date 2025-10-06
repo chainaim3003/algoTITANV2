@@ -3,6 +3,8 @@
  * 
  * Client for interacting with the AtomicMarketplaceV3 smart contract
  * Handles RWA trading, listing, and marketplace operations
+ * 
+ * FIXED: Using official AlgoKit pattern with single config parameter
  */
 import { AlgorandClient } from '@algorandfoundation/algokit-utils'
 import algosdk from 'algosdk'
@@ -48,8 +50,7 @@ export class AtomicMarketplaceV3Client {
       id?: number
       creatorAddress?: string
       sender?: any
-    },
-    private algorand: AlgorandClient
+    }
   ) {
     this.appId = config.id || 0
     // Mock app address - in real implementation would be derived from appId
@@ -68,7 +69,7 @@ export class AtomicMarketplaceV3Client {
       this.registryAppId = params.registryAppId
       this.usdcAssetId = params.usdcAssetId
 
-      const client = this.algorand.client.algod
+      const client = this.config.algorand.client.algod
       const suggestedParams = await client.getTransactionParams().do()
       
       const appCallTxn = algosdk.makeApplicationCallTxnFromObject({
@@ -113,7 +114,7 @@ export class AtomicMarketplaceV3Client {
     signer: (txns: algosdk.Transaction[], indexesToSign?: number[]) => Promise<(Uint8Array | null)[]>
   }): Promise<{ txnId: string; listingId: bigint; explorerUrl: string }> {
     try {
-      const client = this.algorand.client.algod
+      const client = this.config.algorand.client.algod
       const suggestedParams = await client.getTransactionParams().do()
       
       const listingId = BigInt(Date.now())
@@ -176,7 +177,7 @@ export class AtomicMarketplaceV3Client {
     signer: (txns: algosdk.Transaction[], indexesToSign?: number[]) => Promise<(Uint8Array | null)[]>
   }): Promise<{ txnId: string; saleId: bigint; return: boolean }> {
     try {
-      const client = this.algorand.client.algod
+      const client = this.config.algorand.client.algod
       const suggestedParams = await client.getTransactionParams().do()
       
       const saleId = BigInt(Date.now())
@@ -238,7 +239,7 @@ export class AtomicMarketplaceV3Client {
     signer: (txns: algosdk.Transaction[], indexesToSign?: number[]) => Promise<(Uint8Array | null)[]>
   }): Promise<{ txnId: string; saleId: bigint; return: boolean }> {
     try {
-      const client = this.algorand.client.algod
+      const client = this.config.algorand.client.algod
       const suggestedParams = await client.getTransactionParams().do()
       
       const saleId = BigInt(Date.now())
@@ -366,7 +367,7 @@ export class AtomicMarketplaceV3Client {
     signer: (txns: algosdk.Transaction[], indexesToSign?: number[]) => Promise<(Uint8Array | null)[]>
   }): Promise<{ txnId: string; return: boolean }> {
     try {
-      const client = this.algorand.client.algod
+      const client = this.config.algorand.client.algod
       const suggestedParams = await client.getTransactionParams().do()
       
       const appCallTxn = algosdk.makeApplicationCallTxnFromObject({
@@ -403,7 +404,7 @@ export class AtomicMarketplaceV3Client {
     signer: (txns: algosdk.Transaction[], indexesToSign?: number[]) => Promise<(Uint8Array | null)[]>
   }): Promise<{ txnId: string; bidId: bigint }> {
     try {
-      const client = this.algorand.client.algod
+      const client = this.config.algorand.client.algod
       const suggestedParams = await client.getTransactionParams().do()
       
       const bidId = BigInt(Date.now())
@@ -447,7 +448,7 @@ export class AtomicMarketplaceV3Client {
     signer: (txns: algosdk.Transaction[], indexesToSign?: number[]) => Promise<(Uint8Array | null)[]>
   }): Promise<{ txnId: string; return: boolean }> {
     try {
-      const client = this.algorand.client.algod
+      const client = this.config.algorand.client.algod
       const suggestedParams = await client.getTransactionParams().do()
       
       const appCallTxn = algosdk.makeApplicationCallTxnFromObject({
@@ -483,7 +484,7 @@ export class AtomicMarketplaceV3Client {
     signer: (txns: algosdk.Transaction[], indexesToSign?: number[]) => Promise<(Uint8Array | null)[]>
   }): Promise<{ txnId: string; return: boolean }> {
     try {
-      const client = this.algorand.client.algod
+      const client = this.config.algorand.client.algod
       const suggestedParams = await client.getTransactionParams().do()
       
       const appCallTxn = algosdk.makeApplicationCallTxnFromObject({
@@ -517,7 +518,7 @@ export class AtomicMarketplaceV3Client {
    */
   async getGlobalState(): Promise<any> {
     try {
-      const client = this.algorand.client.algod
+      const client = this.config.algorand.client.algod
       const appInfo = await client.getApplicationByID(this.appId).do()
       return getGlobalState(appInfo)
     } catch (error) {

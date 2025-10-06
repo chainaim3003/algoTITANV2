@@ -18,6 +18,7 @@ import algosdk from 'algosdk'
 import { escrowV5Service } from '../services/escrowV5Service'
 import { vLEIDocumentService, type vLEIEndorsedPO } from '../services/vLEIDocumentService'
 import { tradeDocumentStorageService } from '../services/tradeDocumentStorageService'
+import { usdToMicroAlgo, formatUsd, formatAlgo, usdToAlgo } from '../utils/demoCurrencyConverter'
 
 interface ImporterDashboardEnhancedProps {
   marketplaceService: MarketplaceService
@@ -333,9 +334,18 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
 
       showSuccess('📝 Creating trade on blockchain...')
       
+      // ✅ CRITICAL: Convert USD to microALGO using the demo rate
+      const settlementMicroAlgo = usdToMicroAlgo(formData.cargoValue)
+      
+      console.log('💱 Currency Conversion:');
+      console.log(`  USD Input: ${formatUsd(formData.cargoValue)}`);
+      console.log(`  ALGO Amount: ${formatAlgo(usdToAlgo(formData.cargoValue))}`);
+      console.log(`  microALGO: ${settlementMicroAlgo.toString()}`);
+      console.log(`  Demo Rate: $100,000 USD = 1 ALGO`);
+      
       const result = await escrowV5Service.createTradeListing({
         sellerAddress: formData.sellerExporterAddress,
-        amount: formData.cargoValue * 1_000_000,
+        amount: Number(settlementMicroAlgo), // ✅ CORRECT: Converted amount
         productType: formData.productType,
         description: formData.cargoDescription,
         ipfsHash: ipfsHash,
@@ -439,12 +449,12 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
                   {createdTxId}
                 </code>
                 <a 
-                  href={`https://allo.info/tx/${createdTxId}`}
+                  href={`https://testnet.explorer.perawallet.app/tx/${createdTxId}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded flex items-center gap-1 whitespace-nowrap"
                 >
-                  View on Allo.info <span>↗</span>
+                  View on Explorer <span>↗</span>
                 </a>
               </div>
             </div>
@@ -647,18 +657,31 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
                 min="1000"
                 required
               />
-              <div className="mt-2 flex items-center justify-between">
-                <p className="text-xs text-gray-500">
-                  Enter the total value of the cargo in USD
-                </p>
-                <div className="bg-blue-50 border border-blue-200 rounded px-3 py-1">
-                  <span className="text-xs font-medium text-blue-800">
-                    ≈ {(formData.cargoValue / 100000).toFixed(2)} Demo Currency Units
-                  </span>
+              {/* Live Conversion Display */}
+              {formData.cargoValue > 0 && (
+                <div className="mt-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 border border-blue-200">
+                  <div className="text-xs font-semibold text-gray-600 mb-2">SETTLEMENT AMOUNT</div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs text-gray-500">ALGO Amount</div>
+                      <div className="text-lg font-bold text-blue-600">
+                        {formatAlgo(usdToAlgo(formData.cargoValue))}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs text-gray-500">microALGO</div>
+                      <div className="text-sm font-mono text-gray-700">
+                        {usdToMicroAlgo(formData.cargoValue).toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-2 text-center italic">
+                    Demo rate: $100k USD = 1 ALGO
+                  </div>
                 </div>
-              </div>
-              <p className="mt-1 text-xs text-gray-400 italic">
-                Demo rate: 1 DCU = $100,000 USD
+              )}
+              <p className="mt-2 text-xs text-gray-500">
+                Enter the total value of the cargo in USD
               </p>
             </div>
 

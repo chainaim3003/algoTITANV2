@@ -177,7 +177,7 @@ class EscrowV5Service {
       return {
         tradeId,
         txId,
-        explorerUrl: `https://allo.info/tx/${txId}`,
+        explorerUrl: `https://testnet.explorer.perawallet.app/tx/${txId}`,
         confirmedRound: Number(confirmation.confirmedRound) || 0,
       };
     } catch (error) {
