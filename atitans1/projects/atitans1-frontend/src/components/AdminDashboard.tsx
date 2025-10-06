@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useWallet } from '@txnlab/use-wallet-react';
 import { useAddressManager } from '../hooks/useAddressManager';
 import { getAlgodConfigFromViteEnvironment } from '../utils/network/getAlgoClientConfigs';
+import { SettlementCurrencyManager } from './SettlementCurrencyManager';
 
 export function AdminDashboard() {
   const { activeAddress, wallets } = useWallet();

@@ -3,7 +3,7 @@
  * 
  * Two tabs:
  * 1. My Purchases - Shows purchased instruments from blockchain
- * 2. Create Trade - Create new trades in Escrow V4
+ * 2. Create Trade - Create new trades in Escrow V5
  * 
  * NO MOCK DATA - All data comes from blockchain contracts
  * 
@@ -15,7 +15,7 @@ import { MarketplaceService } from '../services/MarketplaceService'
 import { useContracts } from '../hooks/useContracts'
 import { useWallet } from '@txnlab/use-wallet-react'
 import algosdk from 'algosdk'
-import { escrowV4Service } from '../services/escrowV4Service'
+import { escrowV5Service } from '../services/escrowV5Service'
 import { vLEIDocumentService, type vLEIEndorsedPO } from '../services/vLEIDocumentService'
 import { tradeDocumentStorageService } from '../services/tradeDocumentStorageService'
 
@@ -49,7 +49,7 @@ const generateIPFSHash = () => {
   return hash
 }
 
-// Trade from Escrow V4
+// Trade from Escrow V5
 interface EscrowTrade {
   tradeId: number
   buyer: string
@@ -333,7 +333,7 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
 
       showSuccess('📝 Creating trade on blockchain...')
       
-      const result = await escrowV4Service.createTradeListing({
+      const result = await escrowV5Service.createTradeListing({
         sellerAddress: formData.sellerExporterAddress,
         amount: formData.cargoValue * 1_000_000,
         productType: formData.productType,
@@ -459,7 +459,7 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
               onClick={onNavigateToEscrowMarketplace || onNavigateToMarketplace}
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg"
             >
-              View in Escrow V4 Marketplace
+              View in Escrow V5 Marketplace
             </button>
             <button
               onClick={() => {
@@ -590,7 +590,7 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
         // ============================================
         <div className="bg-white shadow rounded-lg p-6">
           <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Create New Trade in Escrow V4</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Create New Trade in Escrow V5</h2>
             <p className="text-sm text-gray-600">
               Create a new trade agreement on the blockchain. The seller/exporter will be notified to fulfill the order.
             </p>
@@ -799,7 +799,7 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
                     Creating Trade on Blockchain...
                   </span>
                 ) : (
-                  '🚀 Create Trade in Escrow V4'
+                  '🚀 Create Trade in Escrow V5'
                 )}
               </button>
             </div>
@@ -808,7 +808,7 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h4 className="text-sm font-semibold text-blue-900 mb-2">ℹ️ What happens next?</h4>
               <ul className="text-xs text-blue-800 space-y-1">
-                <li>✓ Your trade will be created on the Escrow V4 smart contract (State: CREATED)</li>
+                <li>✓ Your trade will be created on the Escrow V5 smart contract (State: CREATED)</li>
                 {vLEILoaded && (
                   <li className="text-purple-700 font-medium">✓ vLEI endorsement will be stored in box storage on-chain</li>
                 )}

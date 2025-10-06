@@ -20,7 +20,11 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "outDir": "./dist/"
+    "outDir": "./dist/",
+    "baseUrl": ".",
+    "paths": {
+      "*": ["src/*", "node_modules/*"]
+    }
   },
   "include": [
     "src/**/*.ts",
@@ -35,11 +39,7 @@
     "src/pages/EnhancedHome_backup.tsx",
     "src/contracts/AtomicMarketplaceV3Client.ts",
     "src/contracts/TradeInstrumentRegistryClientV3.ts",
-    "src/services/MarketplaceService.ts"
-  ],
-  "references": [
-    {
-      "path": "./tsconfig.node.json"
-    }
+    "src/services/MarketplaceService.ts",
+    "../atitans1-contracts"
   ]
 }
