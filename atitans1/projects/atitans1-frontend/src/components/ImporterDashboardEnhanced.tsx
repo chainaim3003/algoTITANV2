@@ -237,35 +237,45 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
   }
 
   /**
-   * NEW: Load vLEI endorsed Purchase Order using Mock API
-   * Product-type specific endorsements
+   * NEW: Load vLEI endorsed Purchase Order from API
+   * Calls: http://54.86.105.148:3001/zkpret/endorsement/purchase/PO_VLEI_1001
    */
   const handleLoadVLEIPO = async () => {
     setIsLoadingVLEI(true)
     setError('')
     
     try {
-      console.log('📖 Loading vLEI endorsed Purchase Order...')
+      console.log('📖 Loading vLEI endorsed Purchase Order from API...')
       console.log(`🎯 Product Type: ${formData.productType}`)
       
-      // Load from Mock API with product type (no file picker needed!)
-      const vLEIDoc = await vLEIDocumentService.readVLEIEndorsedPO(formData.productType)
+      // Call the API endpoint
+      const API_URL = 'http://54.86.105.148:3001/zkpret/endorsement/purchase/PO_VLEI_1001'
+      
+      const response = await fetch(API_URL)
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      const vLEIDoc = await response.json()
       
       if (!vLEIDoc) {
         showError('Failed to load vLEI document. Please try again.')
         return
       }
       
-      // Validate the document (flexible validation)
-      if (!vLEIDocumentService.validateVLEIDocument(vLEIDoc)) {
-        showError('Invalid vLEI document structure.')
-        return
-      }
+      console.log('📦 Received vLEI document from API:', vLEIDoc)
       
-      // Extract summary for display
+      // Skip strict validation for API responses - accept any valid JSON
+      // The API response structure may differ from the mock/file structure
+      console.log('✅ Accepting API response without strict validation')
+      
+      // Extract summary for display (optional - may not work with all API structures)
       const summary = vLEIDocumentService.extractDocumentSummary(vLEIDoc)
       if (summary) {
         console.log('📊 PO Summary:', summary)
+      } else {
+        console.log('ℹ️ Could not extract summary - API response structure may differ')
       }
       
       // Store in form data
@@ -276,14 +286,16 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
       })
       
       setVLEILoaded(true)
-      setUploadedFileName('vLEI-endorsed-PO.json')
+      setUploadedFileName('vLEI-endorsed-PO-API.json')
       
-      const successMsg = summary 
-        ? `✅ vLEI endorsement loaded! PO: ${summary.poId} | Buyer: ${summary.buyer} | Amount: ${summary.currency} ${summary.amount.toLocaleString()}`
-        : '✅ vLEI endorsement loaded!'
+      // Build success message based on what data is available
+      let successMsg = '✅ vLEI endorsement loaded successfully from API!'
+      if (summary) {
+        successMsg = `✅ vLEI endorsement loaded! PO: ${summary.poId} | Buyer: ${summary.buyer} | Amount: ${summary.currency} ${summary.amount.toLocaleString()}`
+      }
       showSuccess(successMsg)
       
-      console.log('✅ vLEI PO loaded successfully')
+      console.log('✅ vLEI PO loaded successfully from API')
       
     } catch (error) {
       console.error('❌ Error loading vLEI PO:', error)
@@ -294,7 +306,7 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
   }
 
   /**
-   * Fetch vLEI data for the importer from GLEIF API
+   * Fetch vLEI data for the importer from zkpret API
    */
   const handleGetImporterVLEI = async () => {
     setIsLoadingImporterVLEI(true)
@@ -303,8 +315,8 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
     try {
       console.log('🔍 Fetching vLEI data for importer...')
       
-      // TODO: Replace with actual REST URL
-      const VLEI_API_URL = 'https://api.gleif.org/api/v1/lei-records?filter[entity.legalName]=TOMMY+HILFIGER+EUROPE+B.V.'
+      // Updated API endpoint for zkpret endorsement
+      const VLEI_API_URL = 'http://54.86.105.148:3001/zkpret/endorsement/lei/TOMMY HILFIGER EUROPE B.V.'
       
       const response = await fetch(VLEI_API_URL)
       
@@ -330,17 +342,24 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
   }
 
   /**
-   * Fetch vLEI data for the seller/exporter
+   * Fetch vLEI data for the seller/exporter from zkpret API
    */
   const handleGetSellerVLEI = async () => {
     setIsLoadingSellerVLEI(true)
     setError('')
     
     try {
-      console.log('🔍 Fetching vLEI data for seller/exporter...')
+      // Validate seller name is not empty
+      if (!formData.sellerName || !formData.sellerName.trim()) {
+        showError('Please enter a seller/exporter company name first')
+        setIsLoadingSellerVLEI(false)
+        return
+      }
       
-      // TODO: Replace with actual REST URL for Jupiter Knitting Company
-      const VLEI_API_URL = 'https://api.gleif.org/api/v1/lei-records?filter[entity.legalName]=Jupiter+Knitting+Company'
+      console.log('🔍 Fetching vLEI data for seller/exporter:', formData.sellerName)
+      
+      // Build API URL with dynamic company name from input field
+      const VLEI_API_URL = `http://54.86.105.148:3001/zkpret/endorsement/lei/${formData.sellerName}`
       
       const response = await fetch(VLEI_API_URL)
       
