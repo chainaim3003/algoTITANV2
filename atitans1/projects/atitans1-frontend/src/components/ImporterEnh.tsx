@@ -19,7 +19,6 @@ import { escrowV5Service } from '../services/escrowV5Service'
 import { vLEIDocumentService, type vLEIEndorsedPO } from '../services/vLEIDocumentService'
 import { tradeDocumentStorageService } from '../services/tradeDocumentStorageService'
 import { usdToMicroAlgo, formatUsd, formatAlgo, usdToAlgo } from '../utils/demoCurrencyConverter'
-import { optInToAsset, checkAssetOptIn } from '../utils/assetOptIn'
 
 interface ImporterDashboardEnhancedProps {
   marketplaceService: MarketplaceService
@@ -102,12 +101,6 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
   const [importerVLEIData, setImporterVLEIData] = useState<string>('') // Store vLEI JSON response
   const [isLoadingSellerVLEI, setIsLoadingSellerVLEI] = useState(false) // Loading state for seller vLEI
   const [sellerVLEIData, setSellerVLEIData] = useState<string>('') // Store seller vLEI JSON response
-  
-  // Opt-in state
-  const [optInAssetId, setOptInAssetId] = useState('')
-  const [isOptingIn, setIsOptingIn] = useState(false)
-  const [optInSuccess, setOptInSuccess] = useState('')
-  const [optInError, setOptInError] = useState('')
 
   // Load account assets and purchases from blockchain
   useEffect(() => {
@@ -497,82 +490,6 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
     }
   }
 
-  /**
-   * Handle RWA Asset Opt-In
-   */
-  const handleOptInToAsset = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!optInAssetId || !optInAssetId.trim()) {
-      setOptInError('Please enter an Asset ID')
-      setTimeout(() => setOptInError(''), 5000)
-      return
-    }
-
-    const assetId = parseInt(optInAssetId.trim())
-    if (isNaN(assetId) || assetId <= 0) {
-      setOptInError('Please enter a valid Asset ID (positive number)')
-      setTimeout(() => setOptInError(''), 5000)
-      return
-    }
-
-    if (!activeAddress) {
-      setOptInError('Please connect your wallet first')
-      setTimeout(() => setOptInError(''), 5000)
-      return
-    }
-
-    if (!signTransactions) {
-      setOptInError('Wallet signing not available')
-      setTimeout(() => setOptInError(''), 5000)
-      return
-    }
-
-    setIsOptingIn(true)
-    setOptInError('')
-    setOptInSuccess('')
-
-    try {
-      console.log(`🔑 Checking opt-in status for Asset ID ${assetId}...`)
-      
-      // Check if already opted in
-      const isOptedIn = await checkAssetOptIn(activeAddress, assetId)
-      
-      if (isOptedIn) {
-        setOptInSuccess(`✅ You are already opted in to Asset ID ${assetId}`)
-        setTimeout(() => setOptInSuccess(''), 8000)
-        setOptInAssetId('')
-        return
-      }
-
-      console.log(`🔑 Opting in to Asset ID ${assetId}...`)
-      
-      const result = await optInToAsset({
-        assetId,
-        senderAddress: activeAddress,
-        signer: signTransactions
-      })
-
-      console.log(`✅ Opt-in successful! Transaction ID: ${result.txId}`)
-      
-      setOptInSuccess(`✅ Successfully opted in to Asset ID ${assetId}! Tx: ${result.txId.slice(0, 10)}...`)
-      setTimeout(() => setOptInSuccess(''), 12000)
-      
-      // Clear the input
-      setOptInAssetId('')
-      
-      // Reload account assets to show the new opt-in
-      await loadAccountAssets()
-      
-    } catch (error: any) {
-      console.error('❌ Error opting in to asset:', error)
-      setOptInError(`Failed to opt-in: ${error.message || 'Unknown error'}`)
-      setTimeout(() => setOptInError(''), 8000)
-    } finally {
-      setIsOptingIn(false)
-    }
-  }
-
   const formatCurrency = (amount: bigint, decimals: number = 6) => {
     return (Number(amount) / Math.pow(10, decimals)).toLocaleString()
   }
@@ -652,16 +569,15 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
             </div>
           </div>
           
-          {/* vLEI JSON Response Text Area - EDITABLE */}
+          {/* vLEI JSON Response Text Area */}
           {importerVLEIData && (
             <div className="mt-6">
-              <label className="block text-xs font-medium text-gray-500 uppercase mb-2">vLEI JSON Response (Editable)</label>
+              <label className="block text-xs font-medium text-gray-500 uppercase mb-2">vLEI JSON Response</label>
               <textarea
                 value={importerVLEIData}
-                onChange={(e) => setImporterVLEIData(e.target.value)}
+                readOnly
                 rows={8}
-                className="w-full px-3 py-2 border border-blue-300 rounded-lg font-mono text-xs bg-white text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Buyer/Importer vLEI JSON data..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg font-mono text-xs bg-gray-50 text-gray-800"
               />
               <div className="mt-2 flex justify-end">
                 <button
@@ -688,10 +604,7 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
 
       {error && (
         <div className="mb-6 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
-          <div className="font-semibold mb-2">⚠️ Error</div>
-          <div className="text-sm max-h-64 overflow-y-auto break-words whitespace-pre-wrap">
-            {error}
-          </div>
+          ⚠️ {error}
         </div>
       )}
 
@@ -802,80 +715,6 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
               >
                 Browse Marketplace
               </button>
-            </div>
-          </div>
-
-          {/* RWA Asset Opt-In Section */}
-          <div className="mb-8 bg-white shadow rounded-lg">
-            <div className="px-6 py-4 border-b border-gray-200 bg-purple-50">
-              <h2 className="text-xl font-semibold text-gray-900">🔑 RWA Asset Opt-In</h2>
-              <p className="text-sm text-gray-500 mt-1">
-                Opt-in to Real World Asset (RWA) NFTs before the seller can execute trade
-              </p>
-            </div>
-
-            <div className="p-6">
-              <form onSubmit={handleOptInToAsset} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    RWA Asset ID *
-                  </label>
-                  <input
-                    type="text"
-                    value={optInAssetId}
-                    onChange={(e) => setOptInAssetId(e.target.value)}
-                    placeholder="Enter Asset ID (e.g., 123456789)"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-mono text-sm"
-                    disabled={isOptingIn}
-                  />
-                  <p className="mt-1 text-xs text-gray-500">
-                    Enter the Asset ID of the RWA NFT instrument you want to opt-in to
-                  </p>
-                </div>
-
-                {/* Opt-in Success Message */}
-                {optInSuccess && (
-                  <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg text-sm">
-                    {optInSuccess}
-                  </div>
-                )}
-
-                {/* Opt-in Error Message */}
-                {optInError && (
-                  <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg text-sm">
-                    {optInError}
-                  </div>
-                )}
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h4 className="text-sm font-semibold text-blue-900 mb-2">ℹ️ Why opt-in?</h4>
-                  <ul className="text-xs text-blue-800 space-y-1">
-                    <li>✓ Required before seller can transfer RWA NFT instrument to you</li>
-                    <li>✓ Automatic opt-in is optional in trade creation (if instrumentAssetId provided)</li>
-                    <li>✓ Manual opt-in gives you control over which assets you accept</li>
-                    <li>✓ Small fee (0.001 ALGO) to opt-in to the asset</li>
-                  </ul>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isOptingIn || !optInAssetId.trim()}
-                  className={`w-full py-3 px-6 rounded-lg font-medium text-white transition-colors ${
-                    isOptingIn || !optInAssetId.trim()
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-purple-600 hover:bg-purple-700'
-                  }`}
-                >
-                  {isOptingIn ? (
-                    <span className="flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                      Opting in to asset...
-                    </span>
-                  ) : (
-                    '🔑 Opt-In to RWA Asset'
-                  )}
-                </button>
-              </form>
             </div>
           </div>
 
@@ -991,16 +830,15 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
                   )}
                 </button>
               </div>
-              {/* Seller vLEI JSON Response - EDITABLE */}
+              {/* Seller vLEI JSON Response */}
               {sellerVLEIData && (
                 <div className="mt-3">
-                  <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Seller vLEI JSON Response (Editable)</label>
+                  <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Seller vLEI JSON Response</label>
                   <textarea
                     value={sellerVLEIData}
-                    onChange={(e) => setSellerVLEIData(e.target.value)}
+                    readOnly
                     rows={6}
-                    className="w-full px-3 py-2 border border-green-300 rounded-lg font-mono text-xs bg-white text-gray-800 focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    placeholder="Seller/Exporter vLEI JSON data..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg font-mono text-xs bg-gray-50 text-gray-800"
                   />
                   <div className="mt-1 flex justify-end">
                     <button
@@ -1176,24 +1014,15 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
                 </button>
               </div>
 
-              {/* vLEI PO JSON Response Text Area - EDITABLE */}
+              {/* vLEI PO JSON Response Text Area */}
               {vLEILoaded && formData.vLEIEndorsedPO && (
                 <div className="mt-3">
-                  <label className="block text-xs font-medium text-gray-500 uppercase mb-1">vLEI PO JSON Response (Editable)</label>
+                  <label className="block text-xs font-medium text-gray-500 uppercase mb-1">vLEI PO JSON Response</label>
                   <textarea
                     value={JSON.stringify(formData.vLEIEndorsedPO, null, 2)}
-                    onChange={(e) => {
-                      try {
-                        const parsed = JSON.parse(e.target.value);
-                        setFormData({...formData, vLEIEndorsedPO: parsed});
-                      } catch (err) {
-                        // Allow typing invalid JSON, will validate on submit
-                        // For now, just update the textarea value
-                      }
-                    }}
+                    readOnly
                     rows={8}
-                    className="w-full px-3 py-2 border border-purple-300 rounded-lg font-mono text-xs bg-white text-gray-800 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="Purchase Order vLEI JSON data..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg font-mono text-xs bg-gray-50 text-gray-800"
                   />
                   <div className="mt-1 flex justify-end">
                     <button
@@ -1237,32 +1066,13 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
               </button>
             </div>
 
-            {/* ALGO Balance Warning */}
-            {(vLEILoaded || importerVLEIData || sellerVLEIData) && (
-              <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-4">
-                <h4 className="text-sm font-semibold text-yellow-900 mb-2">💰 Important: ALGO Balance Required</h4>
-                <p className="text-xs text-yellow-800 mb-2">
-                  Creating a trade with vLEI documents requires storing large JSON files on-chain in Algorand box storage.
-                </p>
-                <div className="bg-yellow-100 rounded p-2 text-xs font-mono text-yellow-900">
-                  <div>• Trade Amount: {formatAlgo(usdToAlgo(formData.cargoValue))}</div>
-                  <div>• Box Storage Cost: ~10-12 ALGO (for vLEI documents)</div>
-                  <div>• Transaction Fees: ~0.01 ALGO</div>
-                  <div className="border-t border-yellow-300 mt-1 pt-1 font-bold">Total Required: ~{(usdToAlgo(formData.cargoValue) + 12).toFixed(2)} ALGO</div>
-                </div>
-                <p className="text-xs text-yellow-800 mt-2">
-                  ⚠️ Ensure your wallet has at least <strong>{(usdToAlgo(formData.cargoValue) + 15).toFixed(0)} ALGO</strong> before submitting.
-                </p>
-              </div>
-            )}
-
             {/* Info Box */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h4 className="text-sm font-semibold text-blue-900 mb-2">ℹ️ What happens next?</h4>
               <ul className="text-xs text-blue-800 space-y-1">
                 <li>✓ Your trade will be created on the Escrow V5 smart contract (State: CREATED)</li>
                 {vLEILoaded && (
-                  <li className="text-purple-700 font-medium">✓ vLEI endorsement will be stored in box storage on-chain (costs ~10 ALGO)</li>
+                  <li className="text-purple-700 font-medium">✓ vLEI endorsement will be stored in box storage on-chain</li>
                 )}
                 <li>✓ The trade will be visible in the marketplace for funding</li>
                 <li>✓ You or a Financier must click "Fund Escrow" to lock funds (State: ESCROWED)</li>

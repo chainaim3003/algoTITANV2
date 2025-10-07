@@ -1,13 +1,13 @@
 {
   "active": {
     "ESCROW_V5": {
-      "appId": 746822940,
-      "appAddress": "O5PNOOQQXP3FR2PYWJQ7TY5FFEUSMXENLFRIFEY6RBDBHPDDJUC4BWDBJ4",
+      "appId": 747043225,
+      "appAddress": "RJWROIDCZRAUDQKVBAIX53L7RP3NZBJVAD2AKMC5LJFJTGZQFI5Y7LVYXU",
       "network": "testnet",
-      "version": "5.0.0",
-      "deployedAt": "2025-10-06",
+      "version": "5.1.0",
+      "deployedAt": "2025-01-06",
       "status": "active",
-      "description": "Redeployed with initialization - production ready",
+      "description": "V5 with vLEI box storage support - production ready",
       "contractName": "AtomicMarketplaceEscrowV5"
     },
     "MARKETPLACE_V3": {
@@ -42,6 +42,18 @@
     }
   },
   "deprecated": {
+    "ESCROW_V5_OLD": {
+      "appId": 746822940,
+      "appAddress": "O5PNOOQQXP3FR2PYWJQ7TY5FFEUSMXENLFRIFEY6RBDBHPDDJUC4BWDBJ4",
+      "network": "testnet",
+      "version": "5.0.0",
+      "deployedAt": "2025-10-06",
+      "deprecatedAt": "2025-01-06",
+      "status": "deprecated",
+      "description": "Old V5 without vLEI support",
+      "contractName": "AtomicMarketplaceEscrowV5",
+      "reason": "Replaced by V5.1.0 with vLEI box storage"
+    },
     "ESCROW_V4": {
       "appId": 746780258,
       "appAddress": "JWFDPCFBKNAUMLVS7KJLZIMC7P65CNDV6OCTZNIUF7T2KB4MQ3WNB5CJCM",

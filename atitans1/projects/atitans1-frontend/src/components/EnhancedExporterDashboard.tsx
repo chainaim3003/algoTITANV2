@@ -11,7 +11,11 @@ import { ADDRESSES, getRoleByAddress, formatAddress } from '../services/roleMapp
 import { realAPI, BLWithTransactions, TokenizedBLWithTransactions, MarketplaceListing } from '../services/realAPI'
 import { WalletRoleStatusIndicator } from './WalletRoleSwitcher'
 import { PendingAssetsOptIn } from './PendingAssetsOptIn'
+import { BoxStorageViewer } from './BoxStorageViewer'
+import { TradeBoxStorageInline } from './TradeBoxStorageInline'
 import { boxStorageService } from '../services/boxStorage'
+import { escrowV4BoxReader } from '../services/escrowV4BoxReader'
+import { escrowV5Service } from '../services/escrowV5Service'
 
 interface RWAAsset {
   id: string
@@ -50,6 +54,7 @@ export function EnhancedExporterDashboard() {
   const { activeRole, isCurrentlyExporter, availableRoles } = useApplicationState()
   const { switchToAddress } = useRoleSwitcher()
   const [rwaAssets, setRWAAssets] = useState<RWAAsset[]>([])
+  const [escrowedTrades, setEscrowedTrades] = useState<any[]>([])
   const [pendingAssets, setPendingAssets] = useState<any[]>([]) // NEW: Pending assets awaiting opt-in
   const [loading, setLoading] = useState(true)
   const [optingIn, setOptingIn] = useState<number | null>(null) // Track which asset is being opted into
@@ -57,6 +62,10 @@ export function EnhancedExporterDashboard() {
     asset: RWAAsset
     action: 'SELL' | 'FRACTIONAL'
   } | null>(null)
+  const [activeTab, setActiveTab] = useState<'marketplace' | 'myrwas' | 'boxstorage'>('marketplace') // Tab state with Box Storage
+  const [uploadingInvoice, setUploadingInvoice] = useState<number | null>(null) // Track which trade is uploading invoice
+  const [uploadingShippingInstructions, setUploadingShippingInstructions] = useState<number | null>(null) // Track shipping instructions upload
+  const [viewingBoxStorage, setViewingBoxStorage] = useState<number | null>(null) // Track which trade's box storage is being viewed
 
   const exporterAddress = ADDRESSES.EXPORTER
   const isConnectedAsExporter = activeAddress === exporterAddress
@@ -167,6 +176,31 @@ export function EnhancedExporterDashboard() {
       console.log(`✅ Loaded ${rwaAssets.length} RWA assets for exporter`)
       setRWAAssets(rwaAssets)
       
+      // 💰 STEP 5: Load trades from V5 Escrow where this exporter is the seller
+      console.log('💰 Loading V5 Escrow trades for seller:', activeAddress)
+      try {
+        const allTrades = await escrowV4BoxReader.getAllTrades()
+        
+        // Filter for trades where seller is this exporter AND state is ESCROWED (1)
+        const sellerEscrowedTrades = allTrades
+          .filter(({ trade }) => 
+            trade.seller === activeAddress && 
+            trade.state === 1 // ESCROWED state
+          )
+          .map(({ trade, metadata }) => ({
+            ...trade,
+            productType: metadata.productType,
+            description: metadata.description,
+            ipfsHash: metadata.ipfsHash
+          }))
+        
+        console.log(`✅ Found ${sellerEscrowedTrades.length} escrowed trades ready for execution`)
+        setEscrowedTrades(sellerEscrowedTrades)
+      } catch (escrowError) {
+        console.error('❌ Error loading V5 Escrow trades:', escrowError)
+        setEscrowedTrades([])
+      }
+      
       // 📊 Show box storage stats
       const stats = await boxStorageService.getBoxStats()
       console.log('📦 Box Storage Stats:', {
@@ -259,6 +293,249 @@ export function EnhancedExporterDashboard() {
     } catch (error) {
       console.error('Error listing RWA for sale:', error)
       alert(`Failed to list RWA: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
+  const handleExecuteTrade = async (tradeId: number) => {
+    if (!activeAddress || !signTransactions) {
+      alert('Please connect your wallet')
+      return
+    }
+
+    try {
+      console.log('🚀 Executing trade:', tradeId)
+      
+      // Prompt for instrument asset ID (RWA NFT)
+      const assetIdStr = prompt(
+        `Execute Trade #${tradeId}\n\n` +
+        `Enter the Instrument Asset ID (RWA NFT) to transfer:\n` +
+        `(This is the tokenized Bill of Lading NFT)`
+      )
+      
+      if (!assetIdStr) {
+        console.log('Trade execution cancelled')
+        return
+      }
+      
+      const instrumentAssetId = parseInt(assetIdStr)
+      if (isNaN(instrumentAssetId) || instrumentAssetId <= 0) {
+        alert('Invalid Asset ID')
+        return
+      }
+      
+      // Get regulator address from role mapping service
+      const REGULATOR_ADDRESS = 'FHMOR733QHV74BCUMG274AKXXSZ4I2NRQ2P3MCS5L4PKOWUKE7SEQQZYHQ'
+      
+      console.log('📝 Preparing to execute trade:', {
+        tradeId,
+        instrumentAssetId,
+        seller: activeAddress,
+        regulator: REGULATOR_ADDRESS
+      })
+      
+      // Show confirmation
+      const confirmed = confirm(
+        `Execute Trade #${tradeId}?\n\n` +
+        `This will:\n` +
+        `1. Transfer RWA NFT (Asset ${instrumentAssetId}) to Buyer/Financier\n` +
+        `2. Pay 5% tax to Regulator (from trade value)\n` +
+        `3. Release escrowed funds to you\n\n` +
+        `Continue?`
+      )
+      
+      if (!confirmed) {
+        console.log('Trade execution cancelled by user')
+        return
+      }
+      
+      // Execute the trade
+      const result = await escrowV5Service.executeTrade({
+        tradeId,
+        instrumentAssetId,
+        senderAddress: activeAddress,
+        signer: signTransactions,
+        regulatorAddress: REGULATOR_ADDRESS
+      })
+      
+      console.log('✅ Trade executed successfully!', result)
+      
+      // Show success message
+      alert(
+        `✅ Trade #${tradeId} Executed Successfully!\n\n` +
+        `Transaction ID: ${result.txId}\n` +
+        `Confirmed at round: ${result.confirmedRound}\n\n` +
+        `View on Explorer: ${result.explorerUrl}`
+      )
+      
+      // Reload data to update UI
+      await loadExporterRWAs()
+    } catch (error: any) {
+      console.error('Error executing trade:', error)
+      alert(`Failed to execute trade: ${error.message}`)
+    }
+  }
+
+  const handleUploadCommercialInvoice = async (tradeId: number, file: File) => {
+    if (!activeAddress) {
+      alert('Please connect your wallet')
+      return
+    }
+
+    try {
+      setUploadingInvoice(tradeId)
+      console.log('📄 Uploading commercial invoice for trade:', tradeId)
+
+      // Read file as base64
+      const fileContent = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => {
+          const base64 = reader.result as string
+          resolve(base64.split(',')[1]) // Remove data:type;base64, prefix
+        }
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+
+      // Store in box storage with trade ID
+      const documentKey = `trade_${tradeId}_commercial_invoice`
+      const documentData = {
+        tradeId,
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+        content: fileContent,
+        uploadedBy: activeAddress,
+        uploadedAt: new Date().toISOString()
+      }
+
+      // Save to localStorage (simulating box storage)
+      localStorage.setItem(documentKey, JSON.stringify(documentData))
+
+      // Update the trade document index
+      const indexKey = `trade_${tradeId}_documents`
+      const existingDocs = localStorage.getItem(indexKey)
+      const docs = existingDocs ? JSON.parse(existingDocs) : []
+      docs.push({
+        type: 'commercial_invoice',
+        fileName: file.name,
+        uploadedAt: documentData.uploadedAt
+      })
+      localStorage.setItem(indexKey, JSON.stringify(docs))
+
+      console.log('✅ Commercial invoice uploaded successfully')
+      
+      // Show success notification
+      const notification = document.createElement('div')
+      notification.className = 'fixed top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-6 py-4 rounded-lg shadow-lg z-50 max-w-md'
+      notification.innerHTML = `
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-lg">✅</span>
+          <span class="font-bold">Commercial Invoice Uploaded!</span>
+        </div>
+        <div class="text-sm">
+          <div><strong>Trade:</strong> #${tradeId}</div>
+          <div><strong>File:</strong> ${file.name}</div>
+          <div class="mt-2 text-xs text-green-600">
+            📄 Document added to trade box storage
+          </div>
+        </div>
+      `
+      document.body.appendChild(notification)
+      setTimeout(() => {
+        if (document.body.contains(notification)) {
+          document.body.removeChild(notification)
+        }
+      }, 5000)
+
+      // Reload trade data to show updated documents
+      await loadExporterRWAs()
+    } catch (error: any) {
+      console.error('Error uploading commercial invoice:', error)
+      alert(`Failed to upload invoice: ${error.message}`)
+    } finally {
+      setUploadingInvoice(null)
+    }
+  }
+
+  const handleUploadShippingInstructions = async (tradeId: number, file: File) => {
+    if (!activeAddress) {
+      alert('Please connect your wallet')
+      return
+    }
+
+    try {
+      setUploadingShippingInstructions(tradeId)
+      console.log('📦 Uploading shipping instructions for trade:', tradeId)
+
+      // Read file as base64
+      const fileContent = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => {
+          const base64 = reader.result as string
+          resolve(base64.split(',')[1]) // Remove data:type;base64, prefix
+        }
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+
+      // Store in box storage with trade ID
+      const documentKey = `trade_${tradeId}_shipping_instructions`
+      const documentData = {
+        tradeId,
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+        content: fileContent,
+        uploadedBy: activeAddress,
+        uploadedAt: new Date().toISOString()
+      }
+
+      // Save to localStorage (simulating box storage)
+      localStorage.setItem(documentKey, JSON.stringify(documentData))
+
+      // Update the trade document index
+      const indexKey = `trade_${tradeId}_documents`
+      const existingDocs = localStorage.getItem(indexKey)
+      const docs = existingDocs ? JSON.parse(existingDocs) : []
+      docs.push({
+        type: 'shipping_instructions',
+        fileName: file.name,
+        uploadedAt: documentData.uploadedAt
+      })
+      localStorage.setItem(indexKey, JSON.stringify(docs))
+
+      console.log('✅ Shipping instructions uploaded successfully')
+      
+      // Show success notification
+      const notification = document.createElement('div')
+      notification.className = 'fixed top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-6 py-4 rounded-lg shadow-lg z-50 max-w-md'
+      notification.innerHTML = `
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-lg">✅</span>
+          <span class="font-bold">Shipping Instructions Uploaded!</span>
+        </div>
+        <div class="text-sm">
+          <div><strong>Trade:</strong> #${tradeId}</div>
+          <div><strong>File:</strong> ${file.name}</div>
+          <div class="mt-2 text-xs text-green-600">
+            📦 Document added to trade box storage
+          </div>
+        </div>
+      `
+      document.body.appendChild(notification)
+      setTimeout(() => {
+        if (document.body.contains(notification)) {
+          document.body.removeChild(notification)
+        }
+      }, 5000)
+
+      // Reload trade data to show updated documents
+      await loadExporterRWAs()
+    } catch (error: any) {
+      console.error('Error uploading shipping instructions:', error)
+      alert(`Failed to upload shipping instructions: ${error.message}`)
+    } finally {
+      setUploadingShippingInstructions(null)
     }
   }
 
@@ -611,8 +888,284 @@ export function EnhancedExporterDashboard() {
         )}  
       </div>
 
-      {/* NEW: Pending Assets Section */}
-      <PendingAssetsOptIn 
+      {/* Tab Navigation */}
+      <div className="mb-8 border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          <button
+            onClick={() => setActiveTab('marketplace')}
+            className={`
+              py-4 px-1 border-b-2 font-medium text-sm transition-colors
+              ${
+                activeTab === 'marketplace'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }
+            `}
+          >
+            🏪 Marketplace
+            {escrowedTrades.length > 0 && (
+              <span className="ml-2 bg-green-100 text-green-800 py-0.5 px-2 rounded-full text-xs font-semibold">
+                {escrowedTrades.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('myrwas')}
+            className={`
+              py-4 px-1 border-b-2 font-medium text-sm transition-colors
+              ${
+                activeTab === 'myrwas'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }
+            `}
+          >
+            🏗️ My RWAs
+            {rwaAssets.length > 0 && (
+              <span className="ml-2 bg-blue-100 text-blue-800 py-0.5 px-2 rounded-full text-xs font-semibold">
+                {rwaAssets.length}
+              </span>
+            )}
+          </button>
+        </nav>
+      </div>
+
+      {/* Marketplace Tab Content */}
+      {activeTab === 'marketplace' && (
+        <>
+          {/* Escrowed Trades - Ready for Execution */}
+          {escrowedTrades.length > 0 ? (
+            <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    💰 Funded Trades - Ready to Execute
+                  </h2>
+                  <p className="text-gray-600 mt-1">
+                    Trades that have been funded and are awaiting your execution
+                  </p>
+                </div>
+                <div className="bg-green-100 text-green-800 px-4 py-2 rounded-lg font-semibold">
+                  {escrowedTrades.length} Ready
+                </div>
+              </div>
+
+              <div className="grid gap-4">
+                {escrowedTrades.map((trade) => (
+                  <div 
+                    key={trade.tradeId} 
+                    className="border border-green-200 rounded-lg p-6 bg-gradient-to-r from-green-50 to-emerald-50 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-3">
+                          <h3 className="text-xl font-bold text-gray-900">
+                            Trade #{trade.tradeId}
+                          </h3>
+                          <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold border border-green-300">
+                            ✓ ESCROWED - Funded
+                          </span>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <div className="text-gray-600 mb-1">Product</div>
+                            <div className="font-semibold text-gray-900">{trade.productType}</div>
+                          </div>
+                          
+                          <div>
+                            <div className="text-gray-600 mb-1">Trade Amount</div>
+                            <div className="font-semibold text-gray-900">
+                              {(Number(trade.amount) / 1_000_000).toFixed(2)} ALGO
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="text-gray-600 mb-1">Buyer</div>
+                            <div className="font-mono text-xs text-gray-700">
+                              {trade.buyer.slice(0, 8)}...{trade.buyer.slice(-8)}
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="text-gray-600 mb-1">Funded By</div>
+                            <div className="font-mono text-xs text-gray-700">
+                              {trade.escrowProvider.slice(0, 8)}...{trade.escrowProvider.slice(-8)}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-3 p-3 bg-white rounded border border-green-200">
+                          <div className="text-xs text-gray-600">Description</div>
+                          <div className="text-sm text-gray-800 mt-1">{trade.description}</div>
+                        </div>
+
+                        {/* Document Upload Section */}
+                        <div className="mt-4 space-y-3">
+                          {/* Shipping Instructions Upload */}
+                          <div>
+                            <label 
+                              htmlFor={`shipping-upload-${trade.tradeId}`}
+                              className="block w-full p-3 border-2 border-dashed border-purple-300 rounded-lg bg-purple-50 hover:bg-purple-100 cursor-pointer transition-colors"
+                              onDragOver={(e) => {
+                                e.preventDefault()
+                                e.currentTarget.classList.add('border-purple-500', 'bg-purple-100')
+                              }}
+                              onDragLeave={(e) => {
+                                e.currentTarget.classList.remove('border-purple-500', 'bg-purple-100')
+                              }}
+                              onDrop={(e) => {
+                                e.preventDefault()
+                                e.currentTarget.classList.remove('border-purple-500', 'bg-purple-100')
+                                const file = e.dataTransfer.files[0]
+                                if (file) {
+                                  handleUploadShippingInstructions(trade.tradeId, file)
+                                }
+                              }}
+                            >
+                              <input
+                                id={`shipping-upload-${trade.tradeId}`}
+                                type="file"
+                                accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0]
+                                  if (file) {
+                                    handleUploadShippingInstructions(trade.tradeId, file)
+                                  }
+                                }}
+                                disabled={uploadingShippingInstructions === trade.tradeId}
+                              />
+                              <div className="flex items-center justify-center gap-2 text-sm">
+                                {uploadingShippingInstructions === trade.tradeId ? (
+                                  <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
+                                    <span className="text-purple-600 font-medium">Uploading...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    <span className="text-purple-700 font-medium">📦 Add Shipping Instructions</span>
+                                    <span className="text-xs text-purple-600">(Drag & Drop or Click)</span>
+                                  </>
+                                )}
+                              </div>
+                            </label>
+                            <div className="text-xs text-gray-500 mt-1 text-center">
+                              Accepted: PDF, DOC, DOCX, PNG, JPG (Max 10MB)
+                            </div>
+                          </div>
+
+                          {/* Commercial Invoice Upload */}
+                          <div>
+                            <label 
+                              htmlFor={`invoice-upload-${trade.tradeId}`}
+                              className="block w-full p-3 border-2 border-dashed border-blue-300 rounded-lg bg-blue-50 hover:bg-blue-100 cursor-pointer transition-colors"
+                              onDragOver={(e) => {
+                                e.preventDefault()
+                                e.currentTarget.classList.add('border-blue-500', 'bg-blue-100')
+                              }}
+                              onDragLeave={(e) => {
+                                e.currentTarget.classList.remove('border-blue-500', 'bg-blue-100')
+                              }}
+                              onDrop={(e) => {
+                                e.preventDefault()
+                                e.currentTarget.classList.remove('border-blue-500', 'bg-blue-100')
+                                const file = e.dataTransfer.files[0]
+                                if (file) {
+                                  handleUploadCommercialInvoice(trade.tradeId, file)
+                                }
+                              }}
+                            >
+                              <input
+                                id={`invoice-upload-${trade.tradeId}`}
+                                type="file"
+                                accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0]
+                                  if (file) {
+                                    handleUploadCommercialInvoice(trade.tradeId, file)
+                                  }
+                                }}
+                                disabled={uploadingInvoice === trade.tradeId}
+                              />
+                              <div className="flex items-center justify-center gap-2 text-sm">
+                                {uploadingInvoice === trade.tradeId ? (
+                                  <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                                    <span className="text-blue-600 font-medium">Uploading...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                    </svg>
+                                    <span className="text-blue-700 font-medium">📄 Add Commercial Invoice</span>
+                                    <span className="text-xs text-blue-600">(Drag & Drop or Click)</span>
+                                  </>
+                                )}
+                              </div>
+                            </label>
+                            <div className="text-xs text-gray-500 mt-1 text-center">
+                              Accepted: PDF, DOC, DOCX, PNG, JPG (Max 10MB)
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => handleExecuteTrade(trade.tradeId)}
+                        className="ml-6 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all flex items-center gap-2"
+                      >
+                        <span>⚡</span>
+                        <span>Execute Trade</span>
+                      </button>
+                    </div>
+                    
+                    {/* Algorand Box Storage Viewer - INLINE */}
+                    <TradeBoxStorageInline tradeId={trade.tradeId} />
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex items-start gap-2">
+                  <span className="text-blue-600 text-lg">ℹ️</span>
+                  <div className="text-sm text-blue-800">
+                    <div className="font-semibold mb-1">What happens when you execute?</div>
+                    <ul className="list-disc list-inside space-y-1 text-blue-700">
+                      <li>Transfer the instrument NFT to the buyer</li>
+                      <li>Pay the regulator tax from your wallet</li>
+                      <li>Receive the trade amount in your wallet</li>
+                      <li>Marketplace receives their fee automatically</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white rounded-lg shadow p-8 text-center">
+              <div className="text-gray-400 text-6xl mb-4">🏪</div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">No Active Marketplace Trades</h3>
+              <p className="text-gray-600 mb-4">
+                You don't have any funded trades awaiting execution.
+              </p>
+              <p className="text-sm text-gray-500">
+                Trades will appear here when buyers have funded them through the marketplace.
+              </p>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* My RWAs Tab Content */}
+      {activeTab === 'myrwas' && (
+        <>
+          {/* Pending Assets Section */}
+          <PendingAssetsOptIn 
         pendingAssets={pendingAssets}
         onOptInSuccess={loadExporterRWAs}
       />
@@ -668,8 +1221,8 @@ export function EnhancedExporterDashboard() {
         </div>
       </div>
 
-      {/* Portfolio Summary */}
-      {rwaAssets.length > 0 && (
+          {/* Portfolio Summary */}
+          {rwaAssets.length > 0 && (
         <div className="mt-8 bg-white shadow rounded-lg">
           <div className="px-6 py-4 border-b border-gray-200">
             <h2 className="text-xl font-semibold text-gray-900">📊 Portfolio Summary</h2>
@@ -703,6 +1256,8 @@ export function EnhancedExporterDashboard() {
             </div>
           </div>
         </div>
+          )}
+        </>
       )}
 
       {/* Action Modals */}

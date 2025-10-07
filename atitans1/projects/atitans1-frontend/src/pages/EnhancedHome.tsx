@@ -12,7 +12,6 @@ import InvestorDashboard from '../components/InvestorDashboard';
 import RegulatorDashboard from '../components/RegulatorDashboard';
 import AdminDashboard from '../components/AdminDashboard';
 import MetaMaskStyleRoleManager from '../components/MetaMaskStyleRoleManager';
-import ProxyTest from '../components/ProxyTest';
 import { EnvironmentAwareWallet } from '../components/EnvironmentAwareWallet';
 import { SmartWalletButton } from '../components/SmartWalletButton';
 import { useAddressManager } from '../hooks/useAddressManager';
@@ -21,7 +20,6 @@ import { useContracts } from '../hooks/useContracts';
 import { MarketplaceService } from '../services/MarketplaceService';
 // SIMPLIFIED: UniversalRoleSwitcher removed - tabs provide sufficient navigation
 // import UniversalRoleSwitcher from '../components/universal/UniversalRoleSwitcher';
-import BLAPITest from '../components/BLAPITest';
 
 type TabType = 'home' | 'exporter' | 'carrier' | 'importer' | 'financier' | 'marketplace' | 'escrow-marketplace' | 'regulator' | 'admin' | 'about';
 
@@ -461,7 +459,7 @@ export default function EnhancedHome() {
       </nav>
 
       {/* MetaMask-Style Role Manager - Shows current role and switching options */}
-      {activeTab !== 'proxy-test' && (
+      {activeTab !== 'escrow-marketplace' && (
         <MetaMaskStyleRoleManager
           currentTab={activeTab as 'home' | 'exporter' | 'carrier' | 'importer' | 'financier' | 'marketplace' | 'regulator' | 'admin' | 'about'}
           selectedBuyer={selectedBuyer}
@@ -580,8 +578,6 @@ export default function EnhancedHome() {
         {activeTab === 'regulator' && <RegulatorDashboard />}
         {activeTab === 'admin' && <AdminDashboard />}
         {activeTab === 'about' && <AboutSection />}
-        {activeTab === 'proxy-test' && <ProxyTest />}
-        {activeTab === 'api-test' && <BLAPITest />}
       </main>
     </div>
   );

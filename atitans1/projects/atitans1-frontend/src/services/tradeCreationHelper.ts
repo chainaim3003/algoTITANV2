@@ -114,58 +114,27 @@ export async function createTradeWrongWay_DONOTUSE(params: CreateTradeParams) {
 }
 
 /**
- * Example: React component integration
+ * Example: How to use in a React component
  * 
- * Shows how to use the createTradeWithCorrectConversion function in a React component
+ * ```typescript
+ * // In your component:
+ * const handleCreateTrade = async () => {
+ *   const tradeParams = {
+ *     cargoValueUsd: 100000,  // ✅ Pass USD value
+ *     sellerAddress: 'EXPORTER_ADDRESS',
+ *     buyerAddress: activeAddress,
+ *     productType: 'eBL',
+ *     description: 'Electronics shipment',
+ *     ipfsHash: 'QmYourIPFSHash...',
+ *     signer: signTransactions
+ *   }
+ *   
+ *   // ✅ Use the correct creation function
+ *   const result = await createTradeWithCorrectConversion(tradeParams)
+ *   alert(`Trade created! ID: ${result.tradeId}`)
+ * }
+ * ```
  */
-export function ExampleTradeCreationComponent() {
-  // Example form state
-  const [cargoValueUsd, setCargoValueUsd] = React.useState(100000)
-  
-  const handleCreateTrade = async () => {
-    try {
-      // Get values from your form
-      const tradeParams = {
-        cargoValueUsd: cargoValueUsd,  // ✅ Pass USD value
-        sellerAddress: 'EXPORTER_ADDRESS',
-        buyerAddress: activeAddress,
-        productType: 'eBL',
-        description: 'Electronics shipment from Shanghai',
-        ipfsHash: 'QmYourIPFSHash...',
-        signer: signTransactions
-      }
-
-      // ✅ Use the correct creation function
-      const result = await createTradeWithCorrectConversion(tradeParams)
-      
-      alert(`Trade created! ID: ${result.tradeId}`)
-    } catch (error) {
-      console.error('Failed to create trade:', error)
-      alert('Failed to create trade')
-    }
-  }
-
-  return (
-    <div>
-      <label>Cargo Value (USD)</label>
-      <input 
-        type="number"
-        value={cargoValueUsd}
-        onChange={(e) => setCargoValueUsd(Number(e.target.value))}
-      />
-      
-      {/* Show live conversion */}
-      <div className="mt-2 text-sm text-gray-600">
-        Settlement: {formatAlgo(usdToAlgo(cargoValueUsd))} 
-        ({formatMicroAlgo(usdToMicroAlgo(cargoValueUsd))})
-      </div>
-      
-      <button onClick={handleCreateTrade}>
-        Create Trade
-      </button>
-    </div>
-  )
-}
 
 /**
  * Testing utilities

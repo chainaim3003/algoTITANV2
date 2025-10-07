@@ -97,50 +97,148 @@ export const EscrowV5Marketplace: React.FC = () => {
 
     try {
       console.log('💰 Funding escrow for trade:', trade.tradeId)
+      console.log('   Buyer:', trade.buyer)
+      console.log('   Active address:', activeAddress)
 
       const isBuyer = trade.buyer === activeAddress
       const totalAmount = trade.amount + (trade.amount * BigInt(MARKETPLACE_FEE_RATE)) / BigInt(10000)
 
-      // Get suggested params
-      const suggestedParams = await contracts.algorand.client.algod
-        .getTransactionParams()
-        .do()
+      console.log('   Is buyer:', isBuyer)
+      console.log('   Total amount to send:', Number(totalAmount))
 
-      // Create payment transaction
-      const paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-        sender: activeAddress,
-        receiver: algosdk.getApplicationAddress(ESCROW_APP_ID),
-        amount: Number(totalAmount),
-        suggestedParams
+      // Get contract payment configuration
+      const appClient = contracts.algorand.client.algod
+      const appInfo = await appClient.getApplicationByID(ESCROW_APP_ID).do()
+      
+      // Find settlement currency from global state
+      let settlementAssetId = 0 // Default to ALGO
+      const globalState = appInfo.params['global-state'] || []
+      for (const state of globalState) {
+        const key = Buffer.from(state.key, 'base64').toString()
+        if (key === 'settlementCurrency') {
+          settlementAssetId = state.value.uint || 0
+          break
+        }
+      }
+
+      const isAlgoPayment = settlementAssetId === 0
+      console.log('   Settlement currency:', isAlgoPayment ? 'ALGO' : `ASA ${settlementAssetId}`)
+
+      // Get suggested params
+      const suggestedParams = await appClient.getTransactionParams().do()
+
+      // Determine method name based on buyer/financier and payment type
+      let methodName: string
+      if (isBuyer) {
+        methodName = isAlgoPayment ? 'escrowTrade' : 'escrowTradeWithAsset'
+      } else {
+        methodName = isAlgoPayment ? 'escrowTradeAsFinancier' : 'escrowTradeAsFinancierWithAsset'
+      }
+
+      console.log('   Calling method:', methodName)
+
+      // Create payment or asset transfer transaction
+      let paymentTxn: algosdk.Transaction
+      if (isAlgoPayment) {
+        paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+          sender: activeAddress,
+          receiver: algosdk.getApplicationAddress(ESCROW_APP_ID),
+          amount: Number(totalAmount),
+          suggestedParams
+        })
+      } else {
+        // Asset transfer for USDC or other ASA
+        paymentTxn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
+          sender: activeAddress,
+          receiver: algosdk.getApplicationAddress(ESCROW_APP_ID),
+          assetIndex: settlementAssetId,
+          amount: Number(totalAmount),
+          suggestedParams
+        })
+      }
+
+      // Create ABI method
+      const escrowMethod = new algosdk.ABIMethod({
+        name: methodName,
+        args: [
+          { type: isAlgoPayment ? 'pay' : 'axfer', name: isAlgoPayment ? 'paymentTxn' : 'assetTxn' },
+          { type: 'uint64', name: 'tradeId' }
+        ],
+        returns: { type: 'bool' }
       })
 
-      // Create app call transaction
+      // Get method selector
+      const methodSelector = escrowMethod.getSelector()
+
+      // Encode trade ID
+      const tradeIdBytes = new Uint8Array(8)
+      new DataView(tradeIdBytes.buffer).setBigUint64(0, BigInt(trade.tradeId), false)
+
+      const appArgs = [methodSelector, tradeIdBytes]
+
+      // Helper functions
+      const encodeUint64 = (value: number): Uint8Array => {
+        const bytes = new Uint8Array(8)
+        new DataView(bytes.buffer).setBigUint64(0, BigInt(value), false)
+        return bytes
+      }
+
+      const createBoxName = (prefix: string, key: Uint8Array): Uint8Array => {
+        const prefixBytes = new TextEncoder().encode(prefix)
+        const result = new Uint8Array(prefixBytes.length + key.length)
+        result.set(prefixBytes, 0)
+        result.set(key, prefixBytes.length)
+        return result
+      }
+
+      // Encode trade ID for box references
+      const tradeIdEncoded = encodeUint64(trade.tradeId)
+      const buyerAddress = algosdk.decodeAddress(trade.buyer).publicKey
+      const sellerAddress = algosdk.decodeAddress(trade.seller).publicKey
+
+      console.log('   Box references: trades, metadata, buyer, seller')
+
+      // Create app call transaction with proper box references and ABI encoding
       const appCallTxn = algosdk.makeApplicationNoOpTxnFromObject({
         sender: activeAddress,
         appIndex: ESCROW_APP_ID,
-        appArgs: [
-          new Uint8Array(Buffer.from(isBuyer ? 'escrowTrade' : 'escrowTradeAsFinancier')),
-          algosdk.encodeUint64(trade.tradeId)
+        appArgs: appArgs,
+        boxes: [
+          { appIndex: ESCROW_APP_ID, name: createBoxName('trades', tradeIdEncoded) },
+          { appIndex: ESCROW_APP_ID, name: createBoxName('metadata', tradeIdEncoded) },
+          { appIndex: ESCROW_APP_ID, name: createBoxName('buyer', buyerAddress) },
+          { appIndex: ESCROW_APP_ID, name: createBoxName('seller', sellerAddress) }
         ],
-        suggestedParams
+        suggestedParams,
+        // Add foreign assets if using ASA
+        ...(isAlgoPayment ? {} : { foreignAssets: [settlementAssetId] })
       })
 
       // Group transactions
       const txnGroup = [paymentTxn, appCallTxn]
       algosdk.assignGroupID(txnGroup)
 
+      console.log('   Signing and submitting transaction group...')
+
       // Sign transactions
       const signedTxns = await signTransactions(
         txnGroup.map(txn => algosdk.encodeUnsignedTransaction(txn))
       )
 
+      // Get transaction ID from the first transaction in the group
+      const txId = paymentTxn.txID()
+      console.log('   Transaction ID:', txId)
+
       // Submit to network
-      const { txId } = await contracts.algorand.client.algod
-        .sendRawTransaction(signedTxns)
-        .do()
+      await appClient.sendRawTransaction(signedTxns).do()
+
+      console.log('   Transaction submitted')
+      console.log('   Waiting for confirmation...')
 
       // Wait for confirmation
-      await algosdk.waitForConfirmation(contracts.algorand.client.algod, txId, 4)
+      await algosdk.waitForConfirmation(appClient, txId, 4)
+
+      console.log('✅ Transaction confirmed!')
 
       setSuccess(
         `✅ Trade #${trade.tradeId} funded successfully! Txn: ${txId}`
@@ -150,6 +248,7 @@ export const EscrowV5Marketplace: React.FC = () => {
       await loadTrades()
     } catch (error: any) {
       console.error('❌ Error funding escrow:', error)
+      console.error('   Full error:', error)
       setError(`Failed to fund escrow: ${error.message || 'Unknown error'}`)
     } finally {
       setFundingTradeId(null)
@@ -299,7 +398,9 @@ export const EscrowV5Marketplace: React.FC = () => {
               const totalCost = calculateTotalCost(trade.amount)
               const fee = totalCost - trade.amount
               const isBuyer = trade.buyer === activeAddress
+              const isSeller = trade.seller === activeAddress
               const canFund = trade.state === TRADE_STATES.CREATED && (isBuyer || !isBuyer)
+              const canExecute = trade.state === TRADE_STATES.ESCROWED && isSeller
 
               return (
                 <div key={trade.tradeId} className="p-6 hover:bg-gray-50 transition-colors">
@@ -341,6 +442,11 @@ export const EscrowV5Marketplace: React.FC = () => {
                             <span className="font-mono text-xs">
                               {trade.seller.slice(0, 6)}...{trade.seller.slice(-6)}
                             </span>
+                            {isSeller && (
+                              <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">
+                                You
+                              </span>
+                            )}
                           </div>
                         </div>
                         <div className="text-xs text-gray-500">
@@ -406,10 +512,21 @@ export const EscrowV5Marketplace: React.FC = () => {
                             '💰 Fund Escrow'
                           )}
                         </button>
+                      ) : canExecute && activeAddress ? (
+                        <button
+                          onClick={() => alert('Execute Trade functionality coming soon!')}
+                          className="px-6 py-2 rounded-lg font-medium text-white bg-green-600 hover:bg-green-700 transition-colors"
+                        >
+                          🚀 Execute Trade
+                        </button>
                       ) : !activeAddress ? (
-                        <div className="text-xs text-gray-500">Connect wallet to fund</div>
+                        <div className="text-xs text-gray-500">Connect wallet to interact</div>
                       ) : trade.state === TRADE_STATES.ESCROWED ? (
-                        <div className="text-sm text-green-600 font-medium">✓ Funded</div>
+                        <div className="text-sm text-green-600 font-medium">✓ Funded - Awaiting Execution</div>
+                      ) : trade.state === TRADE_STATES.EXECUTED ? (
+                        <div className="text-sm text-purple-600 font-medium">⚡ Executed</div>
+                      ) : trade.state === TRADE_STATES.COMPLETED ? (
+                        <div className="text-sm text-green-600 font-medium">✅ Completed</div>
                       ) : null}
                     </div>
                   </div>

@@ -1,19 +1,26 @@
 /**
- * Atomic Marketplace Escrow V5 - Clean Deployment
+ * Atomic Marketplace Escrow V5 - With vLEI Document Storage
  * 
- * CHANGES FROM V4:
- * - Fixed box name encoding issues
- * - Clean deployment with no orphaned boxes
+ * ENHANCEMENTS:
+ * - vLEI document storage in Algorand boxes with IPFS backup hashes
+ * - Buyer/Seller LEI storage at trade creation
+ * - Purchase Order vLEI storage at trade creation  
+ * - Shipping Instruction/Commercial Invoice vLEI storage during execution
+ * - RWA Instrument LEI storage during execution
  * 
  * Settlement Currency:
  * - 0 = ALGO (native currency)
  * - >0 = ASA ID (e.g., USDCA)
  * 
- * All addresses managed in UI:
- * - Buyer: Txn.sender when calling createTrade()
- * - Seller: Parameter to createTrade()
- * - Financier: Txn.sender when calling escrowTradeAsFinancier()
- * - Regulator: Parameter to executeTrade()
+ * Document Lifecycle:
+ * 1. createTrade() - Stores Buyer LEI, Seller LEI, PO vLEI (with IPFS hashes)
+ * 2. executeTrade() - Stores Shipping Instruction, Commercial Invoice, RWA Instrument LEI (with IPFS hashes)
+ * 3. All documents stored in on-chain boxes, retrievable anytime
+ * 
+ * IMPORTANT: Follows AlgoKit best practices for box storage
+ * - Proper box name encoding with keyPrefix + ARC4-encoded key
+ * - All boxes must be referenced in transaction boxes array
+ * - Box MBR (Minimum Balance Requirement) handled by caller
  */
 import {
   Contract,
@@ -29,7 +36,6 @@ import {
   type uint64,
   gtxn,
   type bytes,
-  Account,
 } from '@algorandfoundation/algorand-typescript'
 
 // Trade state constants
@@ -79,12 +85,54 @@ class TradeMetadata extends arc4.Struct<{
   instrumentNumber: arc4.Str
 }> {}
 
+/**
+ * vLEI Documents - Trade Creation Phase
+ * Stores documents provided when creating the trade
+ * Each document includes both on-chain JSON data AND off-chain IPFS hash
+ */
+class VLEICreationDocuments extends arc4.Struct<{
+  buyerLEI: arc4.Str                    // Buyer's Legal Entity Identifier (full JSON)
+  buyerLEI_IPFS: arc4.Str               // IPFS hash for buyer LEI off-chain backup
+  sellerLEI: arc4.Str                   // Seller's Legal Entity Identifier (full JSON)
+  sellerLEI_IPFS: arc4.Str              // IPFS hash for seller LEI off-chain backup
+  purchaseOrderVLEI: arc4.Str           // vLEI-endorsed Purchase Order (full JSON)
+  purchaseOrderVLEI_IPFS: arc4.Str      // IPFS hash for PO vLEI off-chain backup
+  createdAt: arc4.UintN64               // Timestamp when documents were stored
+  createdBy: arc4.Address               // Who created these documents (buyer)
+}> {}
+
+/**
+ * vLEI Documents - Trade Execution Phase
+ * Stores documents provided when executing the trade
+ * Each document includes both on-chain JSON data AND off-chain IPFS hash
+ */
+class VLEIExecutionDocuments extends arc4.Struct<{
+  shippingInstructionVLEI: arc4.Str         // Shipping Instruction document (full JSON)
+  shippingInstructionVLEI_IPFS: arc4.Str    // IPFS hash for shipping instruction backup
+  commercialInvoiceVLEI: arc4.Str           // Commercial Invoice document (full JSON)
+  commercialInvoiceVLEI_IPFS: arc4.Str      // IPFS hash for commercial invoice backup
+  rwaInstrumentLEI: arc4.Str                // RWA Instrument LEI (full JSON)
+  rwaInstrumentLEI_IPFS: arc4.Str           // IPFS hash for RWA instrument LEI backup
+  shippingInstructionId: arc4.Str           // Document ID reference
+  commercialInvoiceId: arc4.Str             // Document ID reference
+  executedAt: arc4.UintN64                  // Timestamp when documents were stored
+  executedBy: arc4.Address                  // Who executed (seller)
+}> {}
+
 export default class AtomicMarketplaceEscrowV5 extends Contract {
   /**
-   * Storage maps
+   * Core storage maps
    */
   public trades = BoxMap<uint64, TradeEscrow>({ keyPrefix: 'trades' })
   public metadata = BoxMap<uint64, TradeMetadata>({ keyPrefix: 'metadata' })
+  
+  /**
+   * vLEI document storage maps
+   * keyPrefix 'vlei_c' = vLEI creation documents
+   * keyPrefix 'vlei_e' = vLEI execution documents
+   */
+  public vLEICreation = BoxMap<uint64, VLEICreationDocuments>({ keyPrefix: 'vlei_c' })
+  public vLEIExecution = BoxMap<uint64, VLEIExecutionDocuments>({ keyPrefix: 'vlei_e' })
   
   /**
    * Index maps for querying
@@ -97,7 +145,7 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
    */
   public nextTradeId = GlobalState<uint64>()
   public platformTreasury = GlobalState<bytes>()
-  public settlementCurrency = GlobalState<uint64>()  // 0 = ALGO, ASA ID = that asset
+  public settlementCurrency = GlobalState<uint64>()
   
   /**
    * Configurable rates (in basis points, 10000 = 100%)
@@ -108,8 +156,6 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
 
   /**
    * Initialize marketplace escrow
-   * @param settlementAssetId - 0 for ALGO, ASA ID for USDCA
-   * @param treasuryAddress - Platform treasury for fees
    */
   @abimethod()
   public initialize(
@@ -120,9 +166,8 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
     
     this.nextTradeId.value = 1
     this.platformTreasury.value = treasuryAddress.bytes
-    this.settlementCurrency.value = settlementAssetId  // 0 = ALGO, >0 = ASA
+    this.settlementCurrency.value = settlementAssetId
     
-    // Set rates (matching Solidity contract)
     this.regulatorTaxRate.value = 500      // 5.00%
     this.regulatorRefundRate.value = 200   // 2.00%
     this.marketplaceFeeRate.value = 25     // 0.25%
@@ -162,7 +207,7 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
   }
 
   /**
-   * Manually set nextTradeId (admin only - for fixing counter issues)
+   * Manually set nextTradeId (admin only)
    */
   @abimethod()
   public setNextTradeId(newId: uint64): boolean {
@@ -229,15 +274,24 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
   }
 
   /**
-   * Create trade (buyer initiates)
+   * Create trade with vLEI documents (buyer initiates)
    * 
-   * UI MUST divide instrument price by 100,000 before calling this
+   * IMPORTANT: This method now accepts vLEI documents with IPFS hashes
+   * - All vLEI JSON objects are stored on-chain in boxes
+   * - IPFS hashes are stored as backup/reference
+   * - Boxes must be included in transaction: trades, metadata, vlei_c, buyer, seller
    * 
    * @param sellerAddress - Exporter/seller address
-   * @param amount - Already divided amount (in microAlgos or microASA)
+   * @param amount - Trade amount (in microAlgos or microASA)
    * @param productType - Type of product being traded
    * @param description - Trade description
-   * @param ipfsHash - IPFS hash of purchase order
+   * @param ipfsHash - IPFS hash of purchase order (legacy field)
+   * @param buyerLEI - Buyer's Legal Entity Identifier (full JSON string)
+   * @param buyerLEI_IPFS - IPFS hash for buyer LEI
+   * @param sellerLEI - Seller's Legal Entity Identifier (full JSON string)
+   * @param sellerLEI_IPFS - IPFS hash for seller LEI
+   * @param purchaseOrderVLEI - vLEI-endorsed Purchase Order (full JSON string)
+   * @param purchaseOrderVLEI_IPFS - IPFS hash for PO vLEI
    */
   @abimethod()
   public createTrade(
@@ -245,7 +299,13 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
     amount: uint64,
     productType: string,
     description: string,
-    ipfsHash: string
+    ipfsHash: string,
+    buyerLEI: string,
+    buyerLEI_IPFS: string,
+    sellerLEI: string,
+    sellerLEI_IPFS: string,
+    purchaseOrderVLEI: string,
+    purchaseOrderVLEI_IPFS: string
   ): uint64 {
     // Initialize if needed
     if (this.nextTradeId.value === 0) {
@@ -288,9 +348,22 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
       instrumentNumber: new arc4.Str('')
     })
     
-    // Store trade and metadata
+    // Create vLEI creation documents
+    const vLEIDocs = new VLEICreationDocuments({
+      buyerLEI: new arc4.Str(buyerLEI),
+      buyerLEI_IPFS: new arc4.Str(buyerLEI_IPFS),
+      sellerLEI: new arc4.Str(sellerLEI),
+      sellerLEI_IPFS: new arc4.Str(sellerLEI_IPFS),
+      purchaseOrderVLEI: new arc4.Str(purchaseOrderVLEI),
+      purchaseOrderVLEI_IPFS: new arc4.Str(purchaseOrderVLEI_IPFS),
+      createdAt: new arc4.UintN64(Global.latestTimestamp),
+      createdBy: new arc4.Address(Txn.sender)
+    })
+    
+    // Store all data in boxes
     this.trades(tradeId).value = trade.copy()
     this.metadata(tradeId).value = meta.copy()
+    this.vLEICreation(tradeId).value = vLEIDocs.copy()
     
     // Add to buyer's trades
     this.addToBuyerTrades(new arc4.Address(Txn.sender), tradeId)
@@ -306,10 +379,6 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
 
   /**
    * Escrow trade - buyer locks funds (ALGO)
-   * 
-   * Group transaction structure:
-   * [0] Payment (buyer to contract)
-   * [1] Application call (this method)
    */
   @abimethod()
   public escrowTrade(paymentTxn: gtxn.PaymentTxn, tradeId: uint64): boolean {
@@ -323,7 +392,6 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
     assert(Global.groupSize === 2, 'Must be group transaction')
     assert(this.isAlgoPayment(), 'Must use ALGO payment for this method')
     
-    // Verify payment
     this.verifyPaymentTxn(paymentTxn, totalRequired, Global.currentApplicationAddress.bytes, Txn.sender.bytes)
     
     trade.escrowProvider = new arc4.Address(Txn.sender)
@@ -337,10 +405,6 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
 
   /**
    * Escrow trade - buyer locks funds (ASA)
-   * 
-   * Group transaction structure:
-   * [0] AssetTransfer (buyer to contract)
-   * [1] Application call (this method)
    */
   @abimethod()
   public escrowTradeWithAsset(assetTxn: gtxn.AssetTransferTxn, tradeId: uint64): boolean {
@@ -354,7 +418,6 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
     assert(Global.groupSize === 2, 'Must be group transaction')
     assert(!this.isAlgoPayment(), 'Must use ASA payment for this method')
     
-    // Verify asset transfer
     this.verifyAssetTransferTxn(assetTxn, totalRequired, Global.currentApplicationAddress.bytes, Txn.sender.bytes)
     
     trade.escrowProvider = new arc4.Address(Txn.sender)
@@ -368,10 +431,6 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
 
   /**
    * Escrow trade as financier - third party locks funds (ALGO)
-   * 
-   * Group transaction structure:
-   * [0] Payment (financier to contract)
-   * [1] Application call (this method)
    */
   @abimethod()
   public escrowTradeAsFinancier(paymentTxn: gtxn.PaymentTxn, tradeId: uint64): boolean {
@@ -386,7 +445,6 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
     assert(Global.groupSize === 2, 'Must be group transaction')
     assert(this.isAlgoPayment(), 'Must use ALGO payment for this method')
     
-    // Verify payment
     this.verifyPaymentTxn(paymentTxn, totalRequired, Global.currentApplicationAddress.bytes, Txn.sender.bytes)
     
     trade.escrowProvider = new arc4.Address(Txn.sender)
@@ -400,10 +458,6 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
 
   /**
    * Escrow trade as financier - third party locks funds (ASA)
-   * 
-   * Group transaction structure:
-   * [0] AssetTransfer (financier to contract)
-   * [1] Application call (this method)
    */
   @abimethod()
   public escrowTradeAsFinancierWithAsset(assetTxn: gtxn.AssetTransferTxn, tradeId: uint64): boolean {
@@ -418,7 +472,6 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
     assert(Global.groupSize === 2, 'Must be group transaction')
     assert(!this.isAlgoPayment(), 'Must use ASA payment for this method')
     
-    // Verify asset transfer
     this.verifyAssetTransferTxn(assetTxn, totalRequired, Global.currentApplicationAddress.bytes, Txn.sender.bytes)
     
     trade.escrowProvider = new arc4.Address(Txn.sender)
@@ -431,12 +484,16 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
   }
 
   /**
-   * Execute trade - seller transfers RWA instrument and receives payment (ALGO)
+   * Execute trade with execution vLEI documents - seller transfers RWA instrument (ALGO)
    * 
-   * Group transaction structure:
-   * [0] Asset transfer (seller sends instrument NFT to buyer/marketplace)
-   * [1] Payment (regulator tax payment from seller)
-   * [2] Application call (this method - triggers internal payments)
+   * @param shippingInstructionVLEI - Shipping Instruction document (full JSON)
+   * @param shippingInstructionVLEI_IPFS - IPFS hash for shipping instruction
+   * @param commercialInvoiceVLEI - Commercial Invoice document (full JSON)
+   * @param commercialInvoiceVLEI_IPFS - IPFS hash for commercial invoice
+   * @param rwaInstrumentLEI - RWA Instrument LEI (full JSON)
+   * @param rwaInstrumentLEI_IPFS - IPFS hash for RWA instrument LEI
+   * @param shippingInstructionId - Document ID reference
+   * @param commercialInvoiceId - Document ID reference
    */
   @abimethod()
   public executeTrade(
@@ -448,7 +505,15 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
     leiId: string,
     leiName: string,
     instrumentNumber: string,
-    regulatorWallet: arc4.Address
+    regulatorWallet: arc4.Address,
+    shippingInstructionVLEI: string,
+    shippingInstructionVLEI_IPFS: string,
+    commercialInvoiceVLEI: string,
+    commercialInvoiceVLEI_IPFS: string,
+    rwaInstrumentLEI: string,
+    rwaInstrumentLEI_IPFS: string,
+    shippingInstructionId: string,
+    commercialInvoiceId: string
   ): boolean {
     const trade = this.trades(tradeId).value.copy()
     assert(trade.state.native === ESCROWED, 'Trade not escrowed')
@@ -467,28 +532,37 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
     assert(Global.groupSize === 3, 'Must be 3-transaction group')
     assert(this.isAlgoPayment(), 'Must use ALGO payment for this method')
     
-    // Verify instrument transfer
     assert(instrumentTxn.sender.bytes === Txn.sender.bytes, 'Instrument must come from seller')
     assert(instrumentTxn.xferAsset === Asset(instrumentAssetId), 'Wrong instrument asset')
     assert(instrumentTxn.assetAmount === 1, 'Must transfer 1 instrument NFT')
     
-    // Route instrument based on escrow provider
     if (trade.escrowProvider.bytes === trade.buyer.bytes) {
       assert(instrumentTxn.assetReceiver.bytes === trade.buyer.bytes, 'Instrument must go to buyer')
     } else {
       assert(instrumentTxn.assetReceiver.bytes === Global.currentApplicationAddress.bytes, 'Instrument must go to marketplace')
     }
     
-    // Verify regulator tax payment
     this.verifyPaymentTxn(regulatorPayment, regulatorTax, regulatorWallet.bytes, Txn.sender.bytes)
     
-    // Send marketplace fee to treasury
     this.sendPayment(this.platformTreasury.value, trade.marketplaceFee.native)
-    
-    // Send payment to seller
     this.sendPayment(trade.seller.bytes, trade.amount.native)
     
-    // Update trade state
+    // Create vLEI execution documents
+    const vLEIExecDocs = new VLEIExecutionDocuments({
+      shippingInstructionVLEI: new arc4.Str(shippingInstructionVLEI),
+      shippingInstructionVLEI_IPFS: new arc4.Str(shippingInstructionVLEI_IPFS),
+      commercialInvoiceVLEI: new arc4.Str(commercialInvoiceVLEI),
+      commercialInvoiceVLEI_IPFS: new arc4.Str(commercialInvoiceVLEI_IPFS),
+      rwaInstrumentLEI: new arc4.Str(rwaInstrumentLEI),
+      rwaInstrumentLEI_IPFS: new arc4.Str(rwaInstrumentLEI_IPFS),
+      shippingInstructionId: new arc4.Str(shippingInstructionId),
+      commercialInvoiceId: new arc4.Str(commercialInvoiceId),
+      executedAt: new arc4.UintN64(Global.latestTimestamp),
+      executedBy: new arc4.Address(Txn.sender)
+    })
+    
+    this.vLEIExecution(tradeId).value = vLEIExecDocs.copy()
+    
     trade.state = new arc4.UintN64(EXECUTED)
     trade.instrumentAssetId = new arc4.UintN64(instrumentAssetId)
     trade.instrumentType = new arc4.UintN64(instrumentTypeNum)
@@ -499,7 +573,6 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
     
     this.trades(tradeId).value = trade.copy()
     
-    // Update metadata
     const meta = this.metadata(tradeId).value.copy()
     meta.leiId = new arc4.Str(leiId)
     meta.leiName = new arc4.Str(leiName)
@@ -510,12 +583,7 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
   }
 
   /**
-   * Execute trade - seller transfers RWA instrument and receives payment (ASA)
-   * 
-   * Group transaction structure:
-   * [0] Asset transfer (seller sends instrument NFT to buyer/marketplace)
-   * [1] AssetTransfer (regulator tax payment from seller)
-   * [2] Application call (this method - triggers internal payments)
+   * Execute trade with execution vLEI documents (ASA version)
    */
   @abimethod()
   public executeTradeWithAsset(
@@ -527,7 +595,15 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
     leiId: string,
     leiName: string,
     instrumentNumber: string,
-    regulatorWallet: arc4.Address
+    regulatorWallet: arc4.Address,
+    shippingInstructionVLEI: string,
+    shippingInstructionVLEI_IPFS: string,
+    commercialInvoiceVLEI: string,
+    commercialInvoiceVLEI_IPFS: string,
+    rwaInstrumentLEI: string,
+    rwaInstrumentLEI_IPFS: string,
+    shippingInstructionId: string,
+    commercialInvoiceId: string
   ): boolean {
     const trade = this.trades(tradeId).value.copy()
     assert(trade.state.native === ESCROWED, 'Trade not escrowed')
@@ -546,28 +622,36 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
     assert(Global.groupSize === 3, 'Must be 3-transaction group')
     assert(!this.isAlgoPayment(), 'Must use ASA payment for this method')
     
-    // Verify instrument transfer
     assert(instrumentTxn.sender.bytes === Txn.sender.bytes, 'Instrument must come from seller')
     assert(instrumentTxn.xferAsset === Asset(instrumentAssetId), 'Wrong instrument asset')
     assert(instrumentTxn.assetAmount === 1, 'Must transfer 1 instrument NFT')
     
-    // Route instrument based on escrow provider
     if (trade.escrowProvider.bytes === trade.buyer.bytes) {
       assert(instrumentTxn.assetReceiver.bytes === trade.buyer.bytes, 'Instrument must go to buyer')
     } else {
       assert(instrumentTxn.assetReceiver.bytes === Global.currentApplicationAddress.bytes, 'Instrument must go to marketplace')
     }
     
-    // Verify regulator tax payment
     this.verifyAssetTransferTxn(regulatorAssetPayment, regulatorTax, regulatorWallet.bytes, Txn.sender.bytes)
     
-    // Send marketplace fee to treasury
     this.sendPayment(this.platformTreasury.value, trade.marketplaceFee.native)
-    
-    // Send payment to seller
     this.sendPayment(trade.seller.bytes, trade.amount.native)
     
-    // Update trade state
+    const vLEIExecDocs = new VLEIExecutionDocuments({
+      shippingInstructionVLEI: new arc4.Str(shippingInstructionVLEI),
+      shippingInstructionVLEI_IPFS: new arc4.Str(shippingInstructionVLEI_IPFS),
+      commercialInvoiceVLEI: new arc4.Str(commercialInvoiceVLEI),
+      commercialInvoiceVLEI_IPFS: new arc4.Str(commercialInvoiceVLEI_IPFS),
+      rwaInstrumentLEI: new arc4.Str(rwaInstrumentLEI),
+      rwaInstrumentLEI_IPFS: new arc4.Str(rwaInstrumentLEI_IPFS),
+      shippingInstructionId: new arc4.Str(shippingInstructionId),
+      commercialInvoiceId: new arc4.Str(commercialInvoiceId),
+      executedAt: new arc4.UintN64(Global.latestTimestamp),
+      executedBy: new arc4.Address(Txn.sender)
+    })
+    
+    this.vLEIExecution(tradeId).value = vLEIExecDocs.copy()
+    
     trade.state = new arc4.UintN64(EXECUTED)
     trade.instrumentAssetId = new arc4.UintN64(instrumentAssetId)
     trade.instrumentType = new arc4.UintN64(instrumentTypeNum)
@@ -578,7 +662,6 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
     
     this.trades(tradeId).value = trade.copy()
     
-    // Update metadata
     const meta = this.metadata(tradeId).value.copy()
     meta.leiId = new arc4.Str(leiId)
     meta.leiName = new arc4.Str(leiName)
@@ -589,11 +672,7 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
   }
 
   /**
-   * Acknowledge payment - seller confirms receipt and triggers regulator refund (ALGO)
-   * 
-   * Group transaction structure:
-   * [0] Payment (regulator sends refund to seller)
-   * [1] Application call (this method)
+   * Acknowledge payment (ALGO)
    */
   @abimethod()
   public acknowledgePayment(regulatorRefund: gtxn.PaymentTxn, tradeId: uint64): boolean {
@@ -604,13 +683,11 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
     assert(Global.groupSize === 2, 'Must be group transaction')
     assert(this.isAlgoPayment(), 'Must use ALGO payment for this method')
     
-    // Verify regulator refund
     this.verifyPaymentTxn(regulatorRefund, trade.regulatorRefundDue.native, trade.seller.bytes, trade.regulatorWallet.bytes)
     
     trade.state = new arc4.UintN64(PAYMENT_ACKNOWLEDGED)
     this.trades(tradeId).value = trade.copy()
     
-    // Auto-transition to completed
     trade.state = new arc4.UintN64(COMPLETED)
     this.trades(tradeId).value = trade.copy()
     
@@ -618,11 +695,7 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
   }
 
   /**
-   * Acknowledge payment - seller confirms receipt and triggers regulator refund (ASA)
-   * 
-   * Group transaction structure:
-   * [0] AssetTransfer (regulator sends refund to seller)
-   * [1] Application call (this method)
+   * Acknowledge payment (ASA)
    */
   @abimethod()
   public acknowledgePaymentWithAsset(regulatorRefund: gtxn.AssetTransferTxn, tradeId: uint64): boolean {
@@ -633,13 +706,11 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
     assert(Global.groupSize === 2, 'Must be group transaction')
     assert(!this.isAlgoPayment(), 'Must use ASA payment for this method')
     
-    // Verify regulator refund
     this.verifyAssetTransferTxn(regulatorRefund, trade.regulatorRefundDue.native, trade.seller.bytes, trade.regulatorWallet.bytes)
     
     trade.state = new arc4.UintN64(PAYMENT_ACKNOWLEDGED)
     this.trades(tradeId).value = trade.copy()
     
-    // Auto-transition to completed
     trade.state = new arc4.UintN64(COMPLETED)
     this.trades(tradeId).value = trade.copy()
     
@@ -661,11 +732,8 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
       'Cannot expire trade in current state'
     )
     
-    // Handle refunds if escrowed
     if (trade.state.native === ESCROWED) {
       const refundAmount: uint64 = trade.amount.native + trade.marketplaceFee.native
-      
-      // Refund to escrow provider - handles ALGO or ASA
       this.sendPayment(trade.escrowProvider.bytes, refundAmount)
     }
     
@@ -677,25 +745,26 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
 
   // ===== View Functions =====
 
-  /**
-   * Get trade details
-   */
   @abimethod({ readonly: true })
   public getTrade(tradeId: uint64): TradeEscrow {
     return this.trades(tradeId).value
   }
 
-  /**
-   * Get trade metadata
-   */
   @abimethod({ readonly: true })
   public getTradeMetadata(tradeId: uint64): TradeMetadata {
     return this.metadata(tradeId).value
   }
 
-  /**
-   * Get trades by buyer
-   */
+  @abimethod({ readonly: true })
+  public getVLEICreationDocuments(tradeId: uint64): VLEICreationDocuments {
+    return this.vLEICreation(tradeId).value
+  }
+
+  @abimethod({ readonly: true })
+  public getVLEIExecutionDocuments(tradeId: uint64): VLEIExecutionDocuments {
+    return this.vLEIExecution(tradeId).value
+  }
+
   @abimethod({ readonly: true })
   public getTradesByBuyer(buyer: arc4.Address): arc4.DynamicArray<arc4.UintN64> {
     if (this.buyerTrades(buyer).exists) {
@@ -704,9 +773,6 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
     return new arc4.DynamicArray<arc4.UintN64>()
   }
 
-  /**
-   * Get trades by seller
-   */
   @abimethod({ readonly: true })
   public getTradesBySeller(seller: arc4.Address): arc4.DynamicArray<arc4.UintN64> {
     if (this.sellerTrades(seller).exists) {
@@ -715,9 +781,6 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
     return new arc4.DynamicArray<arc4.UintN64>()
   }
 
-  /**
-   * Calculate escrow cost (amount + fee)
-   */
   @abimethod({ readonly: true })
   public calculateEscrowCost(amount: uint64): [uint64, uint64] {
     const fee: uint64 = (amount * this.marketplaceFeeRate.value) / 10000
@@ -726,9 +789,6 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
     return [totalCost, fee]
   }
 
-  /**
-   * Calculate regulator costs
-   */
   @abimethod({ readonly: true })
   public calculateRegulatorCosts(amount: uint64): [uint64, uint64] {
     const taxAmount: uint64 = (amount * this.regulatorTaxRate.value) / 10000
@@ -737,9 +797,6 @@ export default class AtomicMarketplaceEscrowV5 extends Contract {
     return [taxAmount, refundAmount]
   }
 
-  /**
-   * Get payment configuration for UI
-   */
   @abimethod({ readonly: true })
   public getPaymentConfig(): [uint64, boolean] {
     const isAlgo = this.settlementCurrency.value === 0

@@ -36,31 +36,32 @@ export function CarrierDashboard() {
   const [shippingApproved, setShippingApproved] = useState(false);
   const [lastCreatedBL, setLastCreatedBL] = useState<any>(null); // Store the last created BL for displaying success message
   const [transferringAsset, setTransferringAsset] = useState<string | null>(null); // Track which asset is being transferred
+  const [shippingInfoFile, setShippingInfoFile] = useState<File | null>(null); // Uploaded shipping info file
   
-  // Shipping Instructions state with defaults from SREE PALANI ANDAVAR AGROS
+  // Shipping Instructions state with defaults from Jupiter Knitting Company
   const [shippingInstructions, setShippingInstructions] = useState(() => {
-    const defaultExporter = getExporterById('sree_palani_agros');
-    const defaultCargo = getCargoItemsByExporter('sree_palani_agros')[0];
+    const defaultExporter = getExporterById('jupiter_knitting');
+    const defaultCargo = getCargoItemsByExporter('jupiter_knitting')[0];
     return {
-      exporterId: 'sree_palani_agros',
-      exporterName: defaultExporter?.name || 'SREE PALANI ANDAVAR AGROS PRIVATE LIMITED',
-      exporterLEI: defaultExporter?.lei || '894500Q32QG6KKGMMI95',
+      exporterId: 'jupiter_knitting',
+      exporterName: defaultExporter?.name || 'Jupiter Knitting Company',
+      exporterLEI: defaultExporter?.lei || '335800GRGIE8MF4P2J49',
       exporterAddress: defaultExporter?.address || 'Tamil Nadu, India',
       titleInstrumentType: 'Bill of Lading (Negotiable)',
-      shipmentTitle: 'Container SPAG-2025 Agricultural Products',
-      cargoDescription: defaultCargo?.description || 'Premium Spices and Agricultural Products from Tamil Nadu',
-      cargoType: 'SITC-0',
-      hsCode: defaultCargo?.hsCode || '0904.11.10',
+      shipmentTitle: 'Container JKC-2025 Textile Products',
+      cargoDescription: defaultCargo?.description || 'Premium Cotton Textiles and Garments',
+      cargoType: 'SITC-65',
+      hsCode: defaultCargo?.hsCode || '6109.10.00',
       declaredValue: {
         amount: 85000,
         currency: 'USD'
       },
-      packingType: defaultCargo?.packingType || 'PP Bags',
+      packingType: defaultCargo?.packingType || 'Cartons',
       grossWeight: 2500,
       netWeight: 2350,
       numberOfPackages: 100,
       unitOfMeasure: 'KGS',
-      complianceInfo: 'DGFT compliant, FSSAI certified, organic certification, customs cleared',
+      complianceInfo: 'DGFT compliant, BIS certified, customs cleared',
       zkProofStatus: 'ZK-PRET Verified',
       portOfLoading: {
         code: 'INMAA',
@@ -78,12 +79,12 @@ export function CarrierDashboard() {
       estimatedTransitDays: 28,
       incoterms: 'FOB',
       specialInstructions: [
-        'Handle with care - organic food grade products',
+        'Handle with care - textile products',
         'Maintain dry storage conditions throughout transit',
         'Temperature range: 15-25°C maximum',
         'Notify consignee 48 hours before arrival at destination port',
-        'All documentation must comply with EU food import regulations',
-        'Certificate of Origin and Phytosanitary Certificate attached',
+        'All documentation must comply with EU import regulations',
+        'Certificate of Origin attached',
         'Container seal number to be verified at Rotterdam customs'
       ]
     };
@@ -397,7 +398,7 @@ export function CarrierDashboard() {
         instrumentNumber: blData.eblReference,
         exporterAddress: EXPORTER_ADDRESS,
         cargoDescription: blData.cargoDescription || 'Trade Cargo',
-        cargoValue: (blData.cargoValue || 100000) * 100,
+        cargoValue: blData.cargoValue || 100000,
         sender: activeAddress,
         signer: signTransactions,
         exporterSigner: exporterSigner // Pass exporter signer if available
@@ -771,74 +772,97 @@ export function CarrierDashboard() {
               </div>
             </div>
           </div>
-          
-          {/* Cargo and Route Information - Condensed */}
-          <div className="grid md:grid-cols-2 gap-6 mb-6">
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">
-                📦 Cargo Information
-              </h3>
-              <div className="bg-gray-50 p-4 rounded-lg space-y-3">
-                <div>
-                  <span className="text-sm font-medium text-gray-700">Cargo Description:</span>
-                  <p className="text-sm text-gray-900">{shippingInstructions.cargoDescription}</p>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <span className="text-sm font-medium text-gray-700">Value:</span>
-                    <p className="text-sm text-gray-900">${shippingInstructions.declaredValue.amount.toLocaleString()} {shippingInstructions.declaredValue.currency}</p>
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium text-gray-700">HS Code:</span>
-                    <p className="text-sm text-gray-900">{shippingInstructions.hsCode}</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <span className="text-sm font-medium text-gray-700">Weight:</span>
-                    <p className="text-sm text-gray-900">{shippingInstructions.grossWeight} KGS</p>
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium text-gray-700">Packages:</span>
-                    <p className="text-sm text-gray-900">{shippingInstructions.numberOfPackages}</p>
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium text-gray-700">Packing:</span>
-                    <p className="text-sm text-gray-900">{shippingInstructions.packingType}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+
+          {/* Drag & Drop for Shipping Information */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-800 border-b pb-2 mb-4">
+              📄 Upload Shipping Information
+            </h3>
             
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">
-                🚢 Route & Vessel
-              </h3>
-              <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+            <label 
+              htmlFor="shipping-info-upload"
+              className="block w-full p-12 border-4 border-dashed border-blue-300 rounded-lg bg-blue-50 hover:bg-blue-100 cursor-pointer transition-colors text-center"
+              onDragOver={(e) => {
+                e.preventDefault()
+                e.currentTarget.classList.add('border-blue-500', 'bg-blue-100')
+              }}
+              onDragLeave={(e) => {
+                e.currentTarget.classList.remove('border-blue-500', 'bg-blue-100')
+              }}
+              onDrop={(e) => {
+                e.preventDefault()
+                e.currentTarget.classList.remove('border-blue-500', 'bg-blue-100')
+                const file = e.dataTransfer.files[0]
+                if (file) {
+                  setShippingInfoFile(file)
+                }
+              }}
+            >
+              <input
+                id="shipping-info-upload"
+                type="file"
+                accept=".pdf,.json,.xml,.txt,.doc,.docx,.csv,.xlsx"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) {
+                    setShippingInfoFile(file)
+                  }
+                }}
+              />
+              
+              {shippingInfoFile ? (
                 <div>
-                  <span className="text-sm font-medium text-gray-700">Vessel:</span>
-                  <p className="text-sm text-gray-900">{shippingInstructions.vesselName}</p>
+                  <div className="text-6xl mb-4">✅</div>
+                  <div className="text-xl font-semibold text-green-700 mb-2">
+                    {shippingInfoFile.name}
+                  </div>
+                  <div className="text-sm text-gray-600 mb-4">
+                    {(shippingInfoFile.size / 1024).toFixed(2)} KB
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      setShippingInfoFile(null)
+                    }}
+                    className="text-sm text-red-600 hover:text-red-700 underline"
+                  >
+                    Remove and upload different file
+                  </button>
                 </div>
+              ) : (
                 <div>
-                  <span className="text-sm font-medium text-gray-700">Route:</span>
-                  <p className="text-sm text-gray-900">
-                    {shippingInstructions.portOfLoading.name} ({shippingInstructions.portOfLoading.code}) 
-                    → {shippingInstructions.portOfDischarge.name} ({shippingInstructions.portOfDischarge.code})
-                  </p>
+                  <div className="text-6xl mb-4">📄</div>
+                  <div className="text-xl font-semibold text-blue-700 mb-2">
+                    Drag & Drop Shipping Information Here
+                  </div>
+                  <div className="text-sm text-gray-600 mb-2">
+                    or click to browse your files
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Accepted formats: PDF, JSON, XML, TXT, DOC, DOCX, CSV, XLSX
+                  </div>
+                  <div className="mt-4 text-xs text-gray-400">
+                    Upload cargo details, booking confirmations, or shipping documents
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <span className="text-sm font-medium text-gray-700">Transit:</span>
-                    <p className="text-sm text-gray-900">{shippingInstructions.estimatedTransitDays} days</p>
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium text-gray-700">Incoterms:</span>
-                    <p className="text-sm text-gray-900">{shippingInstructions.incoterms}</p>
-                  </div>
+              )}
+            </label>
+            
+            <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="flex items-start gap-2">
+                <span className="text-yellow-600 text-lg">ℹ️</span>
+                <div className="text-sm text-yellow-800">
+                  <div className="font-semibold mb-1">Optional Upload</div>
+                  <div>If no file is uploaded, default shipping values from {shippingInstructions.exporterName} will be used.</div>
+                  <div className="text-xs mt-2">LEI: {shippingInstructions.exporterLEI}</div>
                 </div>
               </div>
             </div>
           </div>
+          
+
 
           {/* ZK Proof Status */}
           <div className="mb-6">
@@ -1057,16 +1081,16 @@ export function CarrierDashboard() {
           </section>
         )}
 
-        {/* Enhanced BL Form - Only show after approval */}
+        {/* Simple Drag & Drop for Shipping Information */}
         {shippingApproved && (
           <section id="enhanced-bl-form">
             <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-6 mb-6">
               <div className="text-center">
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  🚀 Enhanced DCSA v3 Bill of Lading Creation
+                  🚀 Create DCSA v3 Bill of Lading RWA
                 </h2>
                 <p className="text-gray-700 mb-3">
-                  Create Bills of Lading with DCSA v3 standard format, legal compliance documents validation, and Algorand Box storage
+                  Upload shipping documentation or use default values from approved shipping instructions
                 </p>
                 <div className="flex justify-center items-center gap-4 text-sm">
                   <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full">✅ DCSA v3.0.0 Compliant</span>
@@ -1077,15 +1101,208 @@ export function CarrierDashboard() {
               </div>
             </div>
 
-            <EnhancedBLForm
-              exporterOptions={EXPORTER_OPTIONS}
-              portLoadingOptions={PORT_OF_LOADING_OPTIONS}
-              portDischargeOptions={PORT_OF_DISCHARGE_OPTIONS}
-              onBLCreated={handleEnhancedBLCreated}
-              onCopyFromShippingInstructions={() => {}} // No longer needed since auto-populated
-              isCreating={isCreatingBL}
-              shippingInstructions={shippingInstructions} // Pass shipping instructions for auto-population
-            />
+            {/* Drag & Drop Upload */}
+            <div className="bg-white shadow rounded-lg p-6 mb-6">
+              <h3 className="text-xl font-semibold mb-4">📄 Upload Shipping Information (Optional)</h3>
+              
+              <label 
+                htmlFor="shipping-info-upload"
+                className="block w-full p-12 border-4 border-dashed border-blue-300 rounded-lg bg-blue-50 hover:bg-blue-100 cursor-pointer transition-colors text-center"
+                onDragOver={(e) => {
+                  e.preventDefault()
+                  e.currentTarget.classList.add('border-blue-500', 'bg-blue-100')
+                }}
+                onDragLeave={(e) => {
+                  e.currentTarget.classList.remove('border-blue-500', 'bg-blue-100')
+                }}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  e.currentTarget.classList.remove('border-blue-500', 'bg-blue-100')
+                  const file = e.dataTransfer.files[0]
+                  if (file) {
+                    setShippingInfoFile(file)
+                  }
+                }}
+              >
+                <input
+                  id="shipping-info-upload"
+                  type="file"
+                  accept=".pdf,.json,.xml,.txt,.doc,.docx"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      setShippingInfoFile(file)
+                    }
+                  }}
+                />
+                
+                {shippingInfoFile ? (
+                  <div>
+                    <div className="text-6xl mb-4">✅</div>
+                    <div className="text-xl font-semibold text-green-700 mb-2">
+                      {shippingInfoFile.name}
+                    </div>
+                    <div className="text-sm text-gray-600 mb-4">
+                      {(shippingInfoFile.size / 1024).toFixed(2)} KB
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        setShippingInfoFile(null)
+                      }}
+                      className="text-sm text-red-600 hover:text-red-700 underline"
+                    >
+                      Remove and upload different file
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="text-6xl mb-4">📄</div>
+                    <div className="text-xl font-semibold text-blue-700 mb-2">
+                      Drag & Drop Shipping Information
+                    </div>
+                    <div className="text-sm text-gray-600 mb-2">
+                      or click to browse
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Accepted: PDF, JSON, XML, TXT, DOC, DOCX
+                    </div>
+                  </div>
+                )}
+              </label>
+              
+              <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="flex items-start gap-2">
+                  <span className="text-yellow-600 text-lg">ℹ️</span>
+                  <div className="text-sm text-yellow-800">
+                    <div className="font-semibold mb-1">Default Exporter: Jupiter Knitting Company</div>
+                    <div>LEI: {shippingInstructions.exporterLEI}</div>
+                    <div className="text-xs mt-2">If no file is uploaded, default values from approved shipping instructions will be used</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Create eBL Button */}
+            <div className="bg-white shadow rounded-lg p-6">
+              <button
+                onClick={() => {
+                  // Create BL data from shipping instructions
+                  const blData = {
+                    eblReference: `eBL-${Date.now()}-${shippingInstructions.exporterId.toUpperCase()}`,
+                    selectedExporter: shippingInstructions.exporterName,
+                    cargoDescription: shippingInstructions.cargoDescription,
+                    cargoValue: shippingInstructions.declaredValue.amount,
+                    currency: shippingInstructions.declaredValue.currency,
+                    portOfLoading: shippingInstructions.portOfLoading.code,
+                    portOfDischarge: shippingInstructions.portOfDischarge.code,
+                    vesselName: shippingInstructions.vesselName,
+                    incoterms: shippingInstructions.incoterms,
+                    dcsaVersion: '3.0.0',
+                    isDCSACompliant: true,
+                    complianceDocuments: shippingInfoFile ? [{
+                      name: shippingInfoFile.name,
+                      size: shippingInfoFile.size,
+                      type: shippingInfoFile.type,
+                      uploadedAt: new Date().toISOString()
+                    }] : [],
+                    hasComplianceDocuments: !!shippingInfoFile
+                  };
+                  handleEnhancedBLCreated(blData);
+                }}
+                disabled={isCreatingBL}
+                className={`w-full px-8 py-4 rounded-lg font-semibold text-lg transition-colors ${
+                  isCreatingBL
+                    ? 'bg-gray-400 cursor-not-allowed text-white'
+                    : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg'
+                }`}
+              >
+                {isCreatingBL ? (
+                  <div className="flex items-center justify-center gap-3">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                    <span>Creating eBL RWA on Algorand...</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center gap-3">
+                    <span>🚀</span>
+                    <span>Create eBL & Mint RWA</span>
+                  </div>
+                )}
+              </button>
+              
+              <div className="mt-4 text-xs text-gray-500 text-center">
+                ⚠️ This will create a real transaction on Algorand TestNet
+              </div>
+
+              {/* Show Last Created Asset ID */}
+              {lastCreatedBL && (
+                <div className="mt-6 p-6 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-300 rounded-lg">
+                  <div className="text-center mb-4">
+                    <div className="text-4xl mb-2">🎉</div>
+                    <h4 className="text-xl font-bold text-purple-900 mb-1">RWA NFT Minted Successfully!</h4>
+                    <p className="text-sm text-purple-700">Asset created on Algorand TestNet</p>
+                  </div>
+                  
+                  <div className="bg-white rounded-lg p-4 mb-4">
+                    <div className="text-center">
+                      <div className="text-xs font-medium text-gray-600 mb-2">ASSET ID</div>
+                      <div className="text-3xl font-bold text-purple-600 mb-3">
+                        {lastCreatedBL.assetId}
+                      </div>
+                      <a
+                        href={`https://testnet.explorer.perawallet.app/asset/${lastCreatedBL.assetId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg transition-colors"
+                      >
+                        View Asset on Explorer →
+                      </a>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="bg-white rounded-lg p-3">
+                      <div className="font-medium text-gray-700 mb-1">Transaction ID</div>
+                      <div className="font-mono text-xs text-gray-600 break-all">
+                        {lastCreatedBL.txId?.substring(0, 20)}...
+                      </div>
+                    </div>
+                    <div className="bg-white rounded-lg p-3">
+                      <div className="font-medium text-gray-700 mb-1">Assigned To</div>
+                      <div className="text-xs text-gray-600">
+                        Exporter (Jupiter Knitting)
+                      </div>
+                    </div>
+                  </div>
+
+                  {lastCreatedBL.ownershipStatus === 'PENDING_EXPORTER_OPTIN' && (
+                    <div className="mt-4 p-3 bg-yellow-50 border border-yellow-300 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <span className="text-yellow-600">⏳</span>
+                        <div className="text-sm text-yellow-800">
+                          <strong>Waiting for Exporter Opt-In</strong>
+                          <div className="text-xs mt-1">The exporter needs to opt-in to receive this asset</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {lastCreatedBL.ownershipStatus === 'TRANSFERRED_TO_EXPORTER' && (
+                    <div className="mt-4 p-3 bg-green-50 border border-green-300 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <span className="text-green-600">✅</span>
+                        <div className="text-sm text-green-800">
+                          <strong>Asset Transferred Successfully</strong>
+                          <div className="text-xs mt-1">The exporter now owns this RWA NFT</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </section>
         )}
 
@@ -1177,7 +1394,7 @@ export function CarrierDashboard() {
                             ) : (
                               <>
                                 <span>🚀</span>
-                                <span>Transfer to Exporter Now</span>
+                                <span>Assign to Seller (Exporter)</span>
                               </>
                             )}
                           </button>
