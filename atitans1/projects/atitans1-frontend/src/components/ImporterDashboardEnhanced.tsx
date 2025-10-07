@@ -230,8 +230,8 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
   }
 
   /**
-   * NEW: Load vLEI endorsed Purchase Order using Mock API
-   * Product-type specific endorsements
+   * NEW: Load vLEI endorsed Purchase Order from your custom API
+   * Calls the purchase order endpoint
    */
   const handleLoadVLEIPO = async () => {
     setIsLoadingVLEI(true)
@@ -241,8 +241,30 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
       console.log('📖 Loading vLEI endorsed Purchase Order...')
       console.log(`🎯 Product Type: ${formData.productType}`)
       
-      // Load from Mock API with product type (no file picker needed!)
-      const vLEIDoc = await vLEIDocumentService.readVLEIEndorsedPO(formData.productType)
+      // ✅ Get API base URL from environment variable (with fallback)
+      const API_BASE_URL = import.meta.env.VITE_VLEI_API_BASE_URL || 'http://localhost:3001'
+      const PO_ID = 'PO_VLEI_1001'
+      const VLEI_PO_API_URL = `${API_BASE_URL}/zkpret/endorsement/purchase/${PO_ID}`
+      
+      console.log('🌐 Calling Purchase Order API:', VLEI_PO_API_URL)
+      console.log('📝 PO ID:', PO_ID)
+      
+      const response = await fetch(VLEI_PO_API_URL)
+      
+      if (!response.ok) {
+        throw new Error(`API returned status ${response.status}`)
+      }
+      
+      const apiResponse = await response.json()
+      
+      console.log('📦 Received API response:', apiResponse)
+      
+      // ✅ Extract the actual vLEI document from your API's response structure
+      // Your API returns: {success: true, purchaseOrderId: '...', data: {...}, metadata: {...}}
+      // We need the 'data' field which contains the actual vLEI document
+      const vLEIDoc = apiResponse.data || apiResponse
+      
+      console.log('📜 Extracted vLEI document:', vLEIDoc)
       
       if (!vLEIDoc) {
         showError('Failed to load vLEI document. Please try again.')
@@ -276,7 +298,7 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
         : '✅ vLEI endorsement loaded!'
       showSuccess(successMsg)
       
-      console.log('✅ vLEI PO loaded successfully')
+      console.log('✅ vLEI PO loaded successfully from API')
       
     } catch (error) {
       console.error('❌ Error loading vLEI PO:', error)
@@ -287,7 +309,8 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
   }
 
   /**
-   * Fetch vLEI data for the importer from GLEIF API
+   * Fetch vLEI data for the importer from your custom API
+   * Calls with the hardcoded importer company name
    */
   const handleGetImporterVLEI = async () => {
     setIsLoadingImporterVLEI(true)
@@ -296,13 +319,18 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
     try {
       console.log('🔍 Fetching vLEI data for importer...')
       
-      // TODO: Replace with actual REST URL
-      const VLEI_API_URL = 'https://api.gleif.org/api/v1/lei-records?filter[entity.legalName]=TOMMY+HILFIGER+EUROPE+B.V.'
+      // ✅ Get API base URL from environment variable (with fallback)
+      const API_BASE_URL = import.meta.env.VITE_VLEI_API_BASE_URL || 'http://localhost:3001'
+      const importerCompanyName = 'TOMMY HILFIGER EUROPE B.V.'
+      const VLEI_API_URL = `${API_BASE_URL}/zkpret/endorsement/lei/${encodeURIComponent(importerCompanyName)}`
+      
+      console.log('🌐 Calling API:', VLEI_API_URL)
+      console.log('📝 Company name:', importerCompanyName)
       
       const response = await fetch(VLEI_API_URL)
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        throw new Error(`API returned status ${response.status}`)
       }
       
       const data = await response.json()
@@ -323,7 +351,8 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
   }
 
   /**
-   * Fetch vLEI data for the seller/exporter
+   * Fetch vLEI data for the seller/exporter from your custom API
+   * Uses the seller name from the input field
    */
   const handleGetSellerVLEI = async () => {
     setIsLoadingSellerVLEI(true)
@@ -331,14 +360,18 @@ export const ImporterDashboardEnhanced: React.FC<ImporterDashboardEnhancedProps>
     
     try {
       console.log('🔍 Fetching vLEI data for seller/exporter...')
+      console.log('📝 Seller name:', formData.sellerName)
       
-      // TODO: Replace with actual REST URL for Jupiter Knitting Company
-      const VLEI_API_URL = 'https://api.gleif.org/api/v1/lei-records?filter[entity.legalName]=Jupiter+Knitting+Company'
+      // ✅ Get API base URL from environment variable (with fallback)
+      const API_BASE_URL = import.meta.env.VITE_VLEI_API_BASE_URL || 'http://localhost:3001'
+      const VLEI_API_URL = `${API_BASE_URL}/zkpret/endorsement/lei/${encodeURIComponent(formData.sellerName)}`
+      
+      console.log('🌐 Calling API:', VLEI_API_URL)
       
       const response = await fetch(VLEI_API_URL)
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        throw new Error(`API returned status ${response.status}`)
       }
       
       const data = await response.json()
