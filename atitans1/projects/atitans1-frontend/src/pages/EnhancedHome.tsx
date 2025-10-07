@@ -43,12 +43,12 @@ export default function EnhancedHome() {
       hasMarketplace: !!contracts?.marketplace,
       hasSignTransactions: !!signTransactions
     });
-    
+
     if (!contracts?.algorand || !contracts?.registry || !contracts?.marketplace || !signTransactions) {
       console.log('❌ MarketplaceService: Missing dependencies');
       return null;
     }
-    
+
     console.log('✅ Creating MarketplaceService');
     return new MarketplaceService(
       contracts.algorand,
@@ -62,7 +62,7 @@ export default function EnhancedHome() {
   const handleTabSwitch = async (tab: TabType) => {
     console.log(`📦 Tab switch initiated: ${tab}`);
     setActiveTab(tab);
-    
+
     // Auto-switch wallet role for LocalNet when switching to role-specific tabs
     // Note: Marketplace preserves current role from other tabs
     if (isLocalNet && activeAddress) {
@@ -74,16 +74,16 @@ export default function EnhancedHome() {
         'regulator': 'REGULATOR',
         // 'marketplace': 'MARKETPLACE_OPERATOR' // REMOVED: Marketplace preserves current role
       };
-      
+
       const targetRole = roleMap[tab];
       if (targetRole) {
         const allAccounts = getAllRoleAccounts();
         const roleAccount = allAccounts.find(acc => acc.role === targetRole);
-        
+
         if (roleAccount && roleAccount.address) {
           console.log(`✅ Auto-switching to ${targetRole} for ${tab} page - Address: ${roleAccount.address}`);
           await switchToRole(targetRole);
-          
+
           // Add small delay to ensure state propagation, then log success
           setTimeout(() => {
             console.log(`🎯 Role switch completed for ${tab} - Should now show ${targetRole} address`);
@@ -107,12 +107,12 @@ export default function EnhancedHome() {
     console.log(`🛍️ Buyer selection: ${buyer}`);
     setSelectedBuyer(buyer);
     setActiveTab('importer');
-    
+
     // Auto-switch wallet for LocalNet
     if (isLocalNet) {
       const allAccounts = getAllRoleAccounts();
       const buyerAccount = allAccounts.find(acc => acc.role === buyer);
-      
+
       if (buyerAccount && buyerAccount.address) {
         console.log(`✅ Switching to ${buyer} wallet: ${buyerAccount.address}`);
         await switchToRole(buyer);
@@ -128,12 +128,12 @@ export default function EnhancedHome() {
     console.log(`💰 Investor selection: ${investor}`);
     setSelectedInvestor(investor);
     setActiveTab('financier');
-    
+
     // Auto-switch wallet for LocalNet
     if (isLocalNet) {
       const allAccounts = getAllRoleAccounts();
       const investorAccount = allAccounts.find(acc => acc.role === investor);
-      
+
       if (investorAccount && investorAccount.address) {
         console.log(`✅ Switching to ${investor} wallet: ${investorAccount.address}`);
         await switchToRole(investor);
@@ -155,12 +155,12 @@ export default function EnhancedHome() {
             <p className="text-xl text-gray-600 mb-8">
               Revolutionary RWA Tokenization with Enhanced Bills of Lading
             </p>
-            
+
             {/* Environment-aware wallet connection section */}
             <div className="mb-8">
               <EnvironmentAwareWallet />
             </div>
-            
+
             <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
               <h2 className="text-2xl font-semibold mb-4">🚀 Revolutionary Features</h2>
               <div className="grid md:grid-cols-2 gap-6 text-left">
@@ -238,83 +238,76 @@ export default function EnhancedHome() {
               <h1 className="text-xl font-bold text-gray-900 mr-8">
                 Algo Titans
               </h1>
-              
+
               {/* Center: Main Navigation */}
               <div className="flex-1 flex justify-center">
                 <div className="flex space-x-2">
                   <button
                     onClick={() => handleTabSwitch('home')}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      activeTab === 'home'
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'text-gray-500 hover:text-gray-700'
-                    }`}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'home'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-500 hover:text-gray-700'
+                      }`}
                   >
                     🏠 Home
                   </button>
                   <button
                     onClick={() => handleTabSwitch('marketplace')}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      activeTab === 'marketplace'
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'text-gray-500 hover:text-gray-700'
-                    }`}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'marketplace'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-500 hover:text-gray-700'
+                      }`}
                   >
                     🏬 Marketplace
                   </button>
                   <button
                     onClick={() => handleTabSwitch('escrow-marketplace')}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      activeTab === 'escrow-marketplace'
-                        ? 'bg-purple-100 text-purple-700'
-                        : 'text-gray-500 hover:text-gray-700'
-                    }`}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'escrow-marketplace'
+                      ? 'bg-purple-100 text-purple-700'
+                      : 'text-gray-500 hover:text-gray-700'
+                      }`}
                   >
                     💰 Escrow V4
                   </button>
                   <button
                     onClick={() => handleTabSwitch('admin')}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      activeTab === 'admin'
-                        ? 'bg-red-100 text-red-700'
-                        : 'text-gray-500 hover:text-gray-700'
-                    }`}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'admin'
+                      ? 'bg-red-100 text-red-700'
+                      : 'text-gray-500 hover:text-gray-700'
+                      }`}
                   >
                     ⚙️ Admin
                   </button>
                   <button
                     onClick={() => handleTabSwitch('about')}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      activeTab === 'about'
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'text-gray-500 hover:text-gray-700'
-                    }`}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'about'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-500 hover:text-gray-700'
+                      }`}
                   >
                     ℹ️ About
                   </button>
                   <button
                     onClick={() => handleTabSwitch('proxy-test')}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      activeTab === 'proxy-test'
-                        ? 'bg-yellow-100 text-yellow-700'
-                        : 'text-gray-500 hover:text-gray-700'
-                    }`}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'proxy-test'
+                      ? 'bg-yellow-100 text-yellow-700'
+                      : 'text-gray-500 hover:text-gray-700'
+                      }`}
                   >
                     🔧 Proxy Test
                   </button>
                   <button
                     onClick={() => handleTabSwitch('api-test')}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      activeTab === 'api-test'
-                        ? 'bg-green-100 text-green-700'
-                        : 'text-gray-500 hover:text-gray-700'
-                    }`}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'api-test'
+                      ? 'bg-green-100 text-green-700'
+                      : 'text-gray-500 hover:text-gray-700'
+                      }`}
                   >
                     🧪 API Test
                   </button>
                 </div>
               </div>
-              
+
               {/* Right: Account Info + Wallet Button */}
               <div className="flex items-center space-x-4">
                 <div className="text-xs text-gray-600">
@@ -324,64 +317,59 @@ export default function EnhancedHome() {
                 <SmartWalletButton />
               </div>
             </div>
-            
+
             {/* Second Row - Role-Based Navigation */}
             <div className="flex justify-center space-x-2 mb-2">
               <button
                 onClick={() => handleTabSwitch('exporter')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeTab === 'exporter'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'exporter'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'text-gray-500 hover:text-gray-700'
+                  }`}
               >
                 📦 Exporter
               </button>
               <button
                 onClick={() => handleTabSwitch('carrier')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeTab === 'carrier'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'carrier'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'text-gray-500 hover:text-gray-700'
+                  }`}
               >
                 🚢 Carrier
               </button>
-              
+
               <button
                 onClick={() => handleTabSwitch('importer')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeTab === 'importer'
-                    ? 'bg-green-100 text-green-700'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'importer'
+                  ? 'bg-green-100 text-green-700'
+                  : 'text-gray-500 hover:text-gray-700'
+                  }`}
               >
                 🏪 Importer
               </button>
-              
+
               <button
                 onClick={() => handleTabSwitch('financier')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeTab === 'financier'
-                    ? 'bg-purple-100 text-purple-700'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'financier'
+                  ? 'bg-purple-100 text-purple-700'
+                  : 'text-gray-500 hover:text-gray-700'
+                  }`}
               >
                 💰 Financier
               </button>
-              
+
               <button
                 onClick={() => handleTabSwitch('regulator')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeTab === 'regulator'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'regulator'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'text-gray-500 hover:text-gray-700'
+                  }`}
               >
                 🏛️ Regulator
               </button>
             </div>
-            
+
             {/* Third Row - Sub-roles for Importer and Financier (only show when relevant tab is active) */}
             {(activeTab === 'importer' || activeTab === 'financier') && (
               <div className="flex justify-center space-x-6">
@@ -391,27 +379,25 @@ export default function EnhancedHome() {
                     <span className="text-sm font-medium text-gray-600">🏪 Importer:</span>
                     <button
                       onClick={() => handleBuyerSelection('BUYER_1')}
-                      className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                        selectedBuyer === 'BUYER_1'
-                          ? 'bg-green-100 text-green-700'
-                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                      }`}
+                      className={`px-2 py-1 rounded text-xs font-medium transition-colors ${selectedBuyer === 'BUYER_1'
+                        ? 'bg-green-100 text-green-700'
+                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                        }`}
                     >
                       Buyer 1
                     </button>
                     <button
                       onClick={() => handleBuyerSelection('BUYER_2')}
-                      className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                        selectedBuyer === 'BUYER_2'
-                          ? 'bg-green-100 text-green-700'
-                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                      }`}
+                      className={`px-2 py-1 rounded text-xs font-medium transition-colors ${selectedBuyer === 'BUYER_2'
+                        ? 'bg-green-100 text-green-700'
+                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                        }`}
                     >
                       Buyer 2
                     </button>
                   </div>
                 )}
-              
+
                 {/* Financier sub-roles - only show when financier tab is active */}
                 {activeTab === 'financier' && (
                   <div className="flex items-center space-x-2">
@@ -420,21 +406,19 @@ export default function EnhancedHome() {
                       <span className="text-xs text-gray-500">Large:</span>
                       <button
                         onClick={() => handleInvestorSelection('INVESTOR_LARGE_1')}
-                        className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                          selectedInvestor === 'INVESTOR_LARGE_1'
-                            ? 'bg-purple-100 text-purple-700'
-                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                        }`}
+                        className={`px-2 py-1 rounded text-xs font-medium transition-colors ${selectedInvestor === 'INVESTOR_LARGE_1'
+                          ? 'bg-purple-100 text-purple-700'
+                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                          }`}
                       >
                         1
                       </button>
                       <button
                         onClick={() => handleInvestorSelection('INVESTOR_LARGE_2')}
-                        className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                          selectedInvestor === 'INVESTOR_LARGE_2'
-                            ? 'bg-purple-100 text-purple-700'
-                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                        }`}
+                        className={`px-2 py-1 rounded text-xs font-medium transition-colors ${selectedInvestor === 'INVESTOR_LARGE_2'
+                          ? 'bg-purple-100 text-purple-700'
+                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                          }`}
                       >
                         2
                       </button>
@@ -442,51 +426,46 @@ export default function EnhancedHome() {
                       <span className="text-xs text-gray-500">Small:</span>
                       <button
                         onClick={() => handleInvestorSelection('INVESTOR_SMALL_1')}
-                        className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                          selectedInvestor === 'INVESTOR_SMALL_1'
-                            ? 'bg-purple-100 text-purple-700'
-                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                        }`}
+                        className={`px-2 py-1 rounded text-xs font-medium transition-colors ${selectedInvestor === 'INVESTOR_SMALL_1'
+                          ? 'bg-purple-100 text-purple-700'
+                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                          }`}
                       >
                         1
                       </button>
                       <button
                         onClick={() => handleInvestorSelection('INVESTOR_SMALL_2')}
-                        className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                          selectedInvestor === 'INVESTOR_SMALL_2'
-                            ? 'bg-purple-100 text-purple-700'
-                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                        }`}
+                        className={`px-2 py-1 rounded text-xs font-medium transition-colors ${selectedInvestor === 'INVESTOR_SMALL_2'
+                          ? 'bg-purple-100 text-purple-700'
+                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                          }`}
                       >
                         2
                       </button>
                       <button
                         onClick={() => handleInvestorSelection('INVESTOR_SMALL_3')}
-                        className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                          selectedInvestor === 'INVESTOR_SMALL_3'
-                            ? 'bg-purple-100 text-purple-700'
-                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                        }`}
+                        className={`px-2 py-1 rounded text-xs font-medium transition-colors ${selectedInvestor === 'INVESTOR_SMALL_3'
+                          ? 'bg-purple-100 text-purple-700'
+                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                          }`}
                       >
                         3
                       </button>
                       <button
                         onClick={() => handleInvestorSelection('INVESTOR_SMALL_4')}
-                        className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                          selectedInvestor === 'INVESTOR_SMALL_4'
-                            ? 'bg-purple-100 text-purple-700'
-                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                        }`}
+                        className={`px-2 py-1 rounded text-xs font-medium transition-colors ${selectedInvestor === 'INVESTOR_SMALL_4'
+                          ? 'bg-purple-100 text-purple-700'
+                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                          }`}
                       >
                         4
                       </button>
                       <button
                         onClick={() => handleInvestorSelection('INVESTOR_SMALL_5')}
-                        className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                          selectedInvestor === 'INVESTOR_SMALL_5'
-                            ? 'bg-purple-100 text-purple-700'
-                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                        }`}
+                        className={`px-2 py-1 rounded text-xs font-medium transition-colors ${selectedInvestor === 'INVESTOR_SMALL_5'
+                          ? 'bg-purple-100 text-purple-700'
+                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                          }`}
                       >
                         5
                       </button>
@@ -501,8 +480,8 @@ export default function EnhancedHome() {
 
       {/* MetaMask-Style Role Manager - Shows current role and switching options */}
       {activeTab !== 'proxy-test' && (
-        <MetaMaskStyleRoleManager 
-          currentTab={activeTab as 'home' | 'exporter' | 'carrier' | 'importer' | 'financier' | 'marketplace' | 'regulator' | 'admin' | 'about'} 
+        <MetaMaskStyleRoleManager
+          currentTab={activeTab as 'home' | 'exporter' | 'carrier' | 'importer' | 'financier' | 'marketplace' | 'regulator' | 'admin' | 'about'}
           selectedBuyer={selectedBuyer}
           selectedInvestor={selectedInvestor}
         />
@@ -514,7 +493,7 @@ export default function EnhancedHome() {
         {activeTab === 'exporter' && <EnhancedExporterDashboard />}
         {activeTab === 'carrier' && <CarrierDashboard />}
         {activeTab === 'importer' && marketplaceService && (
-          <ImporterDashboardEnhanced 
+          <ImporterDashboardEnhanced
             marketplaceService={marketplaceService}
             onNavigateToMarketplace={() => handleTabSwitch('marketplace')}
             onNavigateToEscrowMarketplace={() => handleTabSwitch('escrow-marketplace')}
@@ -549,7 +528,7 @@ export default function EnhancedHome() {
                       After updating .env file, you must restart:
                     </p>
                     <code className="block bg-red-200 px-3 py-2 rounded mt-2 text-sm">
-                      # Press Ctrl+C, then:<br/>
+                      # Press Ctrl+C, then:<br />
                       npm run dev
                     </code>
                   </div>
@@ -579,7 +558,7 @@ export default function EnhancedHome() {
                     📋 Smart Contracts Not Configured
                   </h3>
                   <p className="text-yellow-700 mb-4">
-                    The Importer Dashboard requires smart contracts to be deployed and configured. 
+                    The Importer Dashboard requires smart contracts to be deployed and configured.
                     Please complete the following steps:
                   </p>
                   <ol className="list-decimal list-inside space-y-2 text-yellow-700 mb-4">
@@ -588,7 +567,7 @@ export default function EnhancedHome() {
                     <li>Update your <code className="bg-yellow-100 px-2 py-1 rounded">.env</code> file with the contract app IDs:</li>
                   </ol>
                   <div className="bg-yellow-100 rounded p-3 mb-4 font-mono text-sm text-yellow-900">
-                    VITE_REGISTRY_APP_ID=YOUR_REGISTRY_APP_ID<br/>
+                    VITE_REGISTRY_APP_ID=YOUR_REGISTRY_APP_ID<br />
                     VITE_MARKETPLACE_APP_ID=YOUR_MARKETPLACE_APP_ID
                   </div>
                   <p className="text-yellow-700 text-sm">
@@ -698,7 +677,7 @@ function HomeSection() {
       <PainPointsSection />
       <TestimonialsSection />
       <UserTypesSection />
-      <PricingSection />
+      <SimplePricingSection />
       <CTASection />
       <FooterSection />
     </div>
@@ -730,13 +709,12 @@ function EnhancedMarketplaceDashboard() {
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">Select Transaction Type</h2>
         <div className="grid md:grid-cols-2 gap-6">
-          <div 
+          <div
             onClick={() => setFlowType('direct')}
-            className={`p-6 border-2 rounded-lg cursor-pointer transition-all ${
-              flowType === 'direct' 
-                ? 'border-orange-500 bg-orange-50' 
-                : 'border-gray-200 hover:border-gray-300'
-            }`}
+            className={`p-6 border-2 rounded-lg cursor-pointer transition-all ${flowType === 'direct'
+              ? 'border-orange-500 bg-orange-50'
+              : 'border-gray-200 hover:border-gray-300'
+              }`}
           >
             <div className="flex items-center mb-4">
               <span className="text-3xl mr-3">🏪</span>
@@ -753,13 +731,12 @@ function EnhancedMarketplaceDashboard() {
             </ul>
           </div>
 
-          <div 
+          <div
             onClick={() => setFlowType('financing')}
-            className={`p-6 border-2 rounded-lg cursor-pointer transition-all ${
-              flowType === 'financing' 
-                ? 'border-blue-500 bg-blue-50' 
-                : 'border-gray-200 hover:border-gray-300'
-            }`}
+            className={`p-6 border-2 rounded-lg cursor-pointer transition-all ${flowType === 'financing'
+              ? 'border-blue-500 bg-blue-50'
+              : 'border-gray-200 hover:border-gray-300'
+              }`}
           >
             <div className="flex items-center mb-4">
               <span className="text-3xl mr-3">🚀</span>
@@ -798,7 +775,7 @@ function DirectSaleSection() {
       status: 'available'
     },
     {
-      id: 'BL-DIRECT-002', 
+      id: 'BL-DIRECT-002',
       seller: 'Kerala Spices Co',
       title: 'Cardamom Export to Dubai',
       price: 75000,
@@ -1127,11 +1104,909 @@ function PainPointsSection() {
     </section>
   );
 }
-function TestimonialsSection() { return <div className="py-20 bg-white"><div className="container mx-auto px-4 text-center"><h2 className="text-3xl font-bold">Customer Testimonials</h2></div></div>; }
-function UserTypesSection() { return <div className="py-20 bg-gray-50"><div className="container mx-auto px-4 text-center"><h2 className="text-3xl font-bold">Built for Every Trade Participant</h2></div></div>; }
-function PricingSection() { return <div className="py-20 bg-gray-100"><div className="container mx-auto px-4 text-center"><h2 className="text-3xl font-bold">Choose Your Plan</h2></div></div>; }
-function CTASection() { return <div className="py-20 bg-blue-600"><div className="container mx-auto px-4 text-center"><h2 className="text-3xl font-bold text-white">Ready to Accelerate Your Business?</h2></div></div>; }
-function FooterSection() { return <footer className="border-t bg-gray-100"><div className="container mx-auto py-12 px-4 text-center"><p>&copy; 2024 Algo Titans</p></div></footer>; }
+function TestimonialsSection() {
+  const testimonials = [
+    {
+      id: 1,
+      name: "Gopal Velusamy",
+      role: "Business Head",
+      company: "Jupiter Knitting Company",
+      avatar: "GV",
+      avatarBg: "bg-blue-500",
+      rating: 5,
+      quote: "Algo Titans transformed our working capital cycle from 90 days to instant settlements. We tokenized our bills of lading and got instant liquidity from global investors. Game-changer for Indian MSMEs!",
+      metric: "90 days → Instant settlement",
+      industry: "Textiles"
+    },
+    {
+      id: 2,
+      name: "Maria Santos",
+      role: "CFO",
+      company: "Global Import Partners",
+      avatar: "MS",
+      avatarBg: "bg-green-500",
+      rating: 5,
+      quote: "As an importer, we used to struggle with LC requirements. Now we buy tokenized trade instruments directly on the marketplace with USDC. Fast, transparent, and cost-effective.",
+      metric: "$2.3M in trade volume",
+      industry: "Import/Export"
+    },
+    {
+      id: 3,
+      name: "David Chen",
+      role: "Investment Director",
+      company: "Asia Pacific Fund",
+      avatar: "DC",
+      avatarBg: "bg-purple-500",
+      rating: 5,
+      quote: "We're earning 12-14% APY on trade finance RWAs with full regulatory compliance. The fractionalization allows us to diversify across 50+ shipments with just $50K. Unprecedented access to trade finance.",
+      metric: "14% APY returns",
+      industry: "Institutional Finance"
+    }
+  ];
+
+  return (
+    <section className="py-20 bg-white">
+      <div className="container mx-auto px-4">
+        {/* Section Header */}
+        <div className="mx-auto max-w-2xl text-center mb-16">
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Trusted by Trade Professionals Worldwide</h2>
+          <p className="mt-4 text-lg text-gray-600">
+            See how exporters, importers, investors, and carriers are transforming their trade finance operations with Algo Titans
+          </p>
+        </div>
+
+        {/* Testimonials Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {testimonials.map((testimonial) => (
+            <div
+              key={testimonial.id}
+              className="bg-white rounded-lg shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow duration-300 flex flex-col h-full"
+            >
+              {/* Header with Avatar and Info */}
+              <div className="flex items-start gap-4 mb-4">
+                <div className={`${testimonial.avatarBg} rounded-full h-14 w-14 flex items-center justify-center text-white font-bold text-lg flex-shrink-0`}>
+                  {testimonial.avatar}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-semibold text-gray-900 text-lg truncate">{testimonial.name}</h4>
+                  <p className="text-sm text-gray-600 truncate">{testimonial.role}</p>
+                  <p className="text-xs text-gray-500 truncate">{testimonial.company}</p>
+                </div>
+              </div>
+
+              {/* Star Rating */}
+              <div className="flex gap-1 mb-3">
+                {[...Array(testimonial.rating)].map((_, i) => (
+                  <svg key={i} className="w-5 h-5 text-yellow-400 fill-current" viewBox="0 0 20 20">
+                    <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
+                  </svg>
+                ))}
+              </div>
+
+              {/* Quote */}
+              <blockquote className="text-gray-700 text-sm leading-relaxed mb-4 flex-grow">
+                "{testimonial.quote}"
+              </blockquote>
+
+              {/* Footer with Metric and Industry */}
+              <div className="mt-auto pt-4 border-t border-gray-100">
+                <div className="flex items-center justify-between">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    {testimonial.industry}
+                  </span>
+                  <span className="text-sm font-semibold text-green-600">
+                    {testimonial.metric}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Bottom CTA */}
+        <div className="mt-16 text-center">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-8 max-w-4xl mx-auto">
+            <h3 className="text-2xl font-bold text-gray-900 mb-3">Join 500+ Trade Professionals</h3>
+            <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
+              Start transforming your trade finance operations today. Connect your wallet and experience
+              the future of cross-border commerce.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <button className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-medium transition-colors">
+                Get Started Free →
+              </button>
+              <button className="border border-gray-300 hover:bg-white text-gray-700 px-8 py-3 rounded-lg font-medium transition-colors">
+                Schedule Demo
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+function UserTypesSection() {
+  const userTypes = [
+    {
+      id: 1,
+      icon: "📦",
+      title: "For Exporters",
+      description: "Sell goods internationally and need fast payment",
+      benefits: [
+        "Get paid in 3 days instead of 90 days",
+        "Tokenize bills of lading for instant liquidity",
+        "Access global investor funding",
+        "No need to wait for buyer payments"
+      ],
+      ctaText: "Start Exporting →",
+      bgColor: "bg-blue-50",
+      borderColor: "border-blue-200",
+      iconBg: "bg-blue-100",
+      iconColor: "text-blue-600",
+      buttonColor: "bg-blue-600 hover:bg-blue-700"
+    },
+    {
+      id: 2,
+      icon: "🏪",
+      title: "For Importers",
+      description: "Purchase goods and need flexible payment options",
+      benefits: [
+        "Buy verified trade documents on marketplace",
+        "No letter of credit hassles",
+        "Pay with USDC stablecoins",
+        "Transparent pricing and instant settlement"
+      ],
+      ctaText: "Start Importing →",
+      bgColor: "bg-green-50",
+      borderColor: "border-green-200",
+      iconBg: "bg-green-100",
+      iconColor: "text-green-600",
+      buttonColor: "bg-green-600 hover:bg-green-700"
+    },
+    {
+      id: 3,
+      icon: "🚢",
+      title: "For Carriers",
+      description: "Transport goods and issue bills of lading",
+      benefits: [
+        "Digital bills of lading (no paperwork!)",
+        "85% faster document processing",
+        "Smart contract automation",
+        "IPFS decentralized storage"
+      ],
+      ctaText: "Digitize Operations →",
+      bgColor: "bg-teal-50",
+      borderColor: "border-teal-200",
+      iconBg: "bg-teal-100",
+      iconColor: "text-teal-600",
+      buttonColor: "bg-teal-600 hover:bg-teal-700"
+    },
+    {
+      id: 4,
+      icon: "🏛️",
+      title: "For Institutional Investors",
+      description: "Large funds seeking trade finance opportunities",
+      benefits: [
+        "Earn 12-14% APY on trade finance",
+        "Diversify across global trade instruments",
+        "Full regulatory compliance",
+        "Fractionalized RWA access"
+      ],
+      ctaText: "View Investment Opportunities →",
+      bgColor: "bg-purple-50",
+      borderColor: "border-purple-200",
+      iconBg: "bg-purple-100",
+      iconColor: "text-purple-600",
+      buttonColor: "bg-purple-600 hover:bg-purple-700"
+    },
+    {
+      id: 5,
+      icon: "💵",
+      title: "For Retail Investors",
+      description: "Individual investors with any amount of capital",
+      benefits: [
+        "Start investing with just $50",
+        "Earn steady returns on real trade",
+        "Support MSMEs globally",
+        "Web3 made simple and accessible"
+      ],
+      ctaText: "Start Investing →",
+      bgColor: "bg-orange-50",
+      borderColor: "border-orange-200",
+      iconBg: "bg-orange-100",
+      iconColor: "text-orange-600",
+      buttonColor: "bg-orange-600 hover:bg-orange-700"
+    },
+    {
+      id: 6,
+      icon: "🛡️",
+      title: "For Regulators",
+      description: "Ensure compliance and maintain oversight",
+      benefits: [
+        "Real-time audit trails and monitoring",
+        "DCSA v3 compliance built-in",
+        "Complete transparency and traceability",
+        "International trade standards met"
+      ],
+      ctaText: "Learn About Compliance →",
+      bgColor: "bg-red-50",
+      borderColor: "border-red-200",
+      iconBg: "bg-red-100",
+      iconColor: "text-red-600",
+      buttonColor: "bg-red-600 hover:bg-red-700"
+    }
+  ];
+
+  return (
+    <section className="py-20 bg-gray-50">
+      <div className="container mx-auto px-4">
+        {/* Section Header */}
+        <div className="mx-auto max-w-3xl text-center mb-16">
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">
+            Built for Every Trade Participant
+          </h2>
+          <p className="text-lg text-gray-600">
+            Whether you're an exporter, importer, carrier, investor, or regulator - Algo Titans has
+            powerful solutions tailored to your specific needs in the global trade ecosystem.
+          </p>
+        </div>
+
+        {/* User Type Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+          {userTypes.map((userType) => (
+            <div
+              key={userType.id}
+              className={`${userType.bgColor} ${userType.borderColor} border-2 rounded-xl p-8 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 flex flex-col h-full`}
+            >
+              {/* Icon */}
+              <div className={`${userType.iconBg} w-20 h-20 rounded-2xl flex items-center justify-center mb-6 mx-auto`}>
+                <span className="text-4xl">{userType.icon}</span>
+              </div>
+
+              {/* Title */}
+              <h3 className={`text-2xl font-bold ${userType.iconColor} mb-3 text-center`}>
+                {userType.title}
+              </h3>
+
+              {/* Description */}
+              <p className="text-gray-600 text-center mb-6 text-sm">
+                {userType.description}
+              </p>
+
+              {/* Benefits List */}
+              <ul className="space-y-3 mb-8 flex-grow">
+                {userType.benefits.map((benefit, index) => (
+                  <li key={index} className="flex items-start gap-3">
+                    <span className="text-green-500 text-lg mt-0.5 flex-shrink-0">✓</span>
+                    <span className="text-gray-700 text-sm leading-relaxed">{benefit}</span>
+                  </li>
+                ))}
+              </ul>
+
+              {/* CTA Button */}
+              <button
+                className={`${userType.buttonColor} text-white px-6 py-3 rounded-lg font-medium transition-colors w-full mt-auto`}
+              >
+                {userType.ctaText}
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Bottom Info Section */}
+        <div className="mt-16 max-w-4xl mx-auto">
+          <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-200">
+            <div className="grid md:grid-cols-3 gap-8 text-center">
+              <div>
+                <div className="text-4xl font-bold text-blue-600 mb-2">6+</div>
+                <div className="text-gray-600 text-sm">User Types Supported</div>
+              </div>
+              <div>
+                <div className="text-4xl font-bold text-green-600 mb-2">40+</div>
+                <div className="text-gray-600 text-sm">Countries Worldwide</div>
+              </div>
+              <div>
+                <div className="text-4xl font-bold text-purple-600 mb-2">24/7</div>
+                <div className="text-gray-600 text-sm">Support Available</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Additional Context */}
+        <div className="mt-12 text-center max-w-3xl mx-auto">
+          <p className="text-gray-600 text-sm leading-relaxed">
+            Algo Titans brings together all participants in the international trade value chain onto a
+            single blockchain-powered platform. With smart contracts, RWA tokenization, and
+            stablecoin settlements, we're making global trade faster, cheaper, and more accessible for everyone.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+function PricingSection() {
+  const [billingCycle, setBillingCycle] = React.useState<'monthly' | 'yearly'>('monthly');
+
+  const plans = [
+    {
+      id: 1,
+      name: "Starter",
+      icon: "🌱",
+      tagline: "Perfect for small businesses testing the waters",
+      monthlyPrice: 99,
+      yearlyPrice: 990,
+      popular: false,
+      features: [
+        { text: "Up to 10 Bills of Lading per month", included: true },
+        { text: "Basic marketplace access", included: true },
+        { text: "1 user account", included: true },
+        { text: "Email support (48hr response)", included: true },
+        { text: "Standard fees (2%)", included: true },
+        { text: "Basic analytics dashboard", included: true },
+        { text: "API access", included: false },
+        { text: "Custom branding", included: false },
+        { text: "Priority support", included: false }
+      ],
+      ctaText: "Start Free Trial",
+      bgColor: "bg-white",
+      borderColor: "border-gray-300",
+      buttonColor: "bg-gray-600 hover:bg-gray-700"
+    },
+    {
+      id: 2,
+      name: "Professional",
+      icon: "🚀",
+      tagline: "Ideal for growing businesses with regular trade",
+      monthlyPrice: 499,
+      yearlyPrice: 4990,
+      popular: true,
+      features: [
+        { text: "Unlimited Bills of Lading", included: true },
+        { text: "Full marketplace access", included: true },
+        { text: "Up to 10 user accounts", included: true },
+        { text: "Priority support (4hr response)", included: true },
+        { text: "Reduced fees (1.5%)", included: true },
+        { text: "Advanced analytics & reporting", included: true },
+        { text: "Full API access", included: true },
+        { text: "Custom branding", included: true },
+        { text: "IPFS storage included", included: true },
+        { text: "Dedicated account manager", included: false },
+        { text: "White-label solution", included: false }
+      ],
+      ctaText: "Start 14-Day Trial",
+      bgColor: "bg-blue-50",
+      borderColor: "border-blue-500",
+      buttonColor: "bg-blue-600 hover:bg-blue-700"
+    },
+    {
+      id: 3,
+      name: "Enterprise",
+      icon: "🏢",
+      tagline: "Custom solutions for large organizations",
+      monthlyPrice: null,
+      yearlyPrice: null,
+      popular: false,
+      features: [
+        { text: "Everything in Professional", included: true },
+        { text: "Unlimited users & BLs", included: true },
+        { text: "Dedicated account manager", included: true },
+        { text: "24/7 phone support", included: true },
+        { text: "Lowest fees (0.5-1%)", included: true },
+        { text: "Custom integrations", included: true },
+        { text: "White-label solution", included: true },
+        { text: "SLA guarantees (99.9%)", included: true },
+        { text: "On-premise deployment option", included: true },
+        { text: "Custom contract terms", included: true },
+        { text: "Compliance consulting", included: true }
+      ],
+      ctaText: "Contact Sales",
+      bgColor: "bg-gradient-to-br from-purple-50 to-indigo-50",
+      borderColor: "border-purple-300",
+      buttonColor: "bg-purple-600 hover:bg-purple-700"
+    }
+  ];
+
+  const getPrice = (plan: typeof plans[0]) => {
+    if (!plan.monthlyPrice) return "Custom";
+    const price = billingCycle === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice;
+    return `${price?.toLocaleString()}`;
+  };
+
+  const getSavingsPercentage = () => {
+    return 17; // 17% savings on yearly
+  };
+
+  return (
+    <section className="py-20 bg-gray-100">
+      <div className="container mx-auto px-4">
+        {/* Section Header */}
+        <div className="mx-auto max-w-3xl text-center mb-12">
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">
+            Choose Your Plan
+          </h2>
+          <p className="text-lg text-gray-600 mb-8">
+            Select the perfect plan for your business size. All plans include blockchain security,
+            DCSA compliance, and no hidden fees.
+          </p>
+
+          {/* Billing Cycle Toggle */}
+          <div className="inline-flex items-center bg-white rounded-lg p-1 shadow-md">
+            <button
+              onClick={() => setBillingCycle('monthly')}
+              className={`px-6 py-2 rounded-md font-medium transition-all ${billingCycle === 'monthly'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-600 hover:text-gray-900'
+                }`}
+            >
+              Monthly
+            </button>
+            <button
+              onClick={() => setBillingCycle('yearly')}
+              className={`px-6 py-2 rounded-md font-medium transition-all relative ${billingCycle === 'yearly'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-600 hover:text-gray-900'
+                }`}
+            >
+              Yearly
+              <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full">
+                Save {getSavingsPercentage()}%
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* Pricing Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto mb-16">
+          {plans.map((plan) => (
+            <div
+              key={plan.id}
+              className={`relative ${plan.bgColor} ${plan.borderColor} ${plan.popular ? 'border-4 shadow-2xl scale-105' : 'border-2 shadow-lg'
+                } rounded-2xl p-8 flex flex-col h-full transition-all duration-300 hover:-translate-y-2`}
+            >
+              {/* Popular Badge */}
+              {plan.popular && (
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                  <span className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-1 rounded-full text-sm font-bold shadow-lg">
+                    ⭐ MOST POPULAR
+                  </span>
+                </div>
+              )}
+
+              {/* Icon and Name */}
+              <div className="text-center mb-6">
+                <div className="text-5xl mb-3">{plan.icon}</div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
+                <p className="text-sm text-gray-600">{plan.tagline}</p>
+              </div>
+
+              {/* Price */}
+              <div className="text-center mb-8">
+              </div>
+
+              {/* Features List */}
+              <ul className="space-y-4 mb-8 flex-grow">
+                {plan.features.map((feature, index) => (
+                  <li key={index} className="flex items-start gap-3">
+                    {feature.included ? (
+                      <span className="text-green-500 text-xl flex-shrink-0">✓</span>
+                    ) : (
+                      <span className="text-gray-300 text-xl flex-shrink-0">✗</span>
+                    )}
+                    <span className={`text-sm ${feature.included ? 'text-gray-700' : 'text-gray-400'
+                      }`}>
+                      {feature.text}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+
+              {/* CTA Button */}
+              <button
+                className={`${plan.buttonColor} text-white px-8 py-4 rounded-lg font-semibold transition-colors w-full text-lg mt-auto`}
+              >
+                {plan.ctaText}
+              </button>
+
+              {/* Trust Note */}
+              {plan.id !== 3 && (
+                <p className="text-center text-xs text-gray-500 mt-4">
+                  No credit card required
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Feature Comparison Table */}
+        <div className="max-w-6xl mx-auto mb-16">
+          <h3 className="text-2xl font-bold text-center mb-8">Detailed Feature Comparison</h3>
+          <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b-2 border-gray-200">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Feature</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">Starter</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-blue-600 bg-blue-50">Professional</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">Enterprise</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  <tr>
+                    <td className="px-6 py-4 text-sm text-gray-700">Bills of Lading</td>
+                    <td className="px-6 py-4 text-center text-sm">10/month</td>
+                    <td className="px-6 py-4 text-center text-sm bg-blue-50 font-semibold">Unlimited</td>
+                    <td className="px-6 py-4 text-center text-sm">Unlimited</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 text-sm text-gray-700">User Accounts</td>
+                    <td className="px-6 py-4 text-center text-sm">1</td>
+                    <td className="px-6 py-4 text-center text-sm bg-blue-50 font-semibold">10</td>
+                    <td className="px-6 py-4 text-center text-sm">Unlimited</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 text-sm text-gray-700">Transaction Fees</td>
+                    <td className="px-6 py-4 text-center text-sm">2%</td>
+                    <td className="px-6 py-4 text-center text-sm bg-blue-50 font-semibold">1.5%</td>
+                    <td className="px-6 py-4 text-center text-sm">0.5-1%</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 text-sm text-gray-700">Support Response</td>
+                    <td className="px-6 py-4 text-center text-sm">48 hours</td>
+                    <td className="px-6 py-4 text-center text-sm bg-blue-50 font-semibold">4 hours</td>
+                    <td className="px-6 py-4 text-center text-sm">24/7 Phone</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 text-sm text-gray-700">API Access</td>
+                    <td className="px-6 py-4 text-center text-sm"><span className="text-red-500">✗</span></td>
+                    <td className="px-6 py-4 text-center text-sm bg-blue-50"><span className="text-green-500 text-xl">✓</span></td>
+                    <td className="px-6 py-4 text-center text-sm"><span className="text-green-500 text-xl">✓</span></td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 text-sm text-gray-700">Custom Branding</td>
+                    <td className="px-6 py-4 text-center text-sm"><span className="text-red-500">✗</span></td>
+                    <td className="px-6 py-4 text-center text-sm bg-blue-50"><span className="text-green-500 text-xl">✓</span></td>
+                    <td className="px-6 py-4 text-center text-sm"><span className="text-green-500 text-xl">✓</span></td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 text-sm text-gray-700">Dedicated Manager</td>
+                    <td className="px-6 py-4 text-center text-sm"><span className="text-red-500">✗</span></td>
+                    <td className="px-6 py-4 text-center text-sm bg-blue-50"><span className="text-red-500">✗</span></td>
+                    <td className="px-6 py-4 text-center text-sm"><span className="text-green-500 text-xl">✓</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* FAQ Section */}
+        <div className="max-w-4xl mx-auto mb-16">
+          <h3 className="text-2xl font-bold text-center mb-8">Frequently Asked Questions</h3>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h4 className="font-semibold text-gray-900 mb-2">Can I change plans later?</h4>
+              <p className="text-sm text-gray-600">
+                Yes! You can upgrade or downgrade anytime. Changes take effect immediately, and we'll
+                prorate any charges.
+              </p>
+            </div>
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h4 className="font-semibold text-gray-900 mb-2">What payment methods do you accept?</h4>
+              <p className="text-sm text-gray-600">
+                We accept credit cards, bank transfers, and crypto payments (USDC, ALGO). All transactions
+                are secure and encrypted.
+              </p>
+            </div>
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h4 className="font-semibold text-gray-900 mb-2">Is there a setup fee?</h4>
+              <p className="text-sm text-gray-600">
+                No setup fees on any plan. What you see is what you pay. Enterprise clients may have
+                custom onboarding included.
+              </p>
+            </div>
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h4 className="font-semibold text-gray-900 mb-2">What's included in the free trial?</h4>
+              <p className="text-sm text-gray-600">
+                14-day free trial with full access to your chosen plan's features. No credit card required
+                to start. Cancel anytime.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Trust Badges */}
+        <div className="flex flex-wrap items-center justify-center gap-8 max-w-4xl mx-auto">
+          <div className="flex items-center gap-2 text-gray-600">
+            <span className="text-2xl">💳</span>
+            <span className="text-sm font-medium">Secure Payment</span>
+          </div>
+          <div className="flex items-center gap-2 text-gray-600">
+            <span className="text-2xl">🔒</span>
+            <span className="text-sm font-medium">SOC 2 Certified</span>
+          </div>
+          <div className="flex items-center gap-2 text-gray-600">
+            <span className="text-2xl">✅</span>
+            <span className="text-sm font-medium">GDPR Compliant</span>
+          </div>
+          <div className="flex items-center gap-2 text-gray-600">
+            <span className="text-2xl">🌐</span>
+            <span className="text-sm font-medium">Global Coverage</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+{/* Feature Comparison Table */ }
+< div className="max-w-6xl mx-auto mb-16" >
+  <h3 className="text-2xl font-bold text-center mb-8">Detailed Feature Comparison</h3>
+  <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+    <div className="overflow-x-auto">
+      <table className="w-full">
+        <thead className="bg-gray-50 border-b-2 border-gray-200">
+          <tr>
+            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Feature</th>
+            <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">Starter</th>
+            <th className="px-6 py-4 text-center text-sm font-semibold text-blue-600 bg-blue-50">Professional</th>
+            <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">Enterprise</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-200">
+          <tr>
+            <td className="px-6 py-4 text-sm text-gray-700">Bills of Lading</td>
+            <td className="px-6 py-4 text-center text-sm">10/month</td>
+            <td className="px-6 py-4 text-center text-sm bg-blue-50 font-semibold">Unlimited</td>
+            <td className="px-6 py-4 text-center text-sm">Unlimited</td>
+          </tr>
+          <tr>
+            <td className="px-6 py-4 text-sm text-gray-700">User Accounts</td>
+            <td className="px-6 py-4 text-center text-sm">1</td>
+            <td className="px-6 py-4 text-center text-sm bg-blue-50 font-semibold">10</td>
+            <td className="px-6 py-4 text-center text-sm">Unlimited</td>
+          </tr>
+          <tr>
+            <td className="px-6 py-4 text-sm text-gray-700">Transaction Fees</td>
+            <td className="px-6 py-4 text-center text-sm">2%</td>
+            <td className="px-6 py-4 text-center text-sm bg-blue-50 font-semibold">1.5%</td>
+            <td className="px-6 py-4 text-center text-sm">0.5-1%</td>
+          </tr>
+          <tr>
+            <td className="px-6 py-4 text-sm text-gray-700">Support Response</td>
+            <td className="px-6 py-4 text-center text-sm">48 hours</td>
+            <td className="px-6 py-4 text-center text-sm bg-blue-50 font-semibold">4 hours</td>
+            <td className="px-6 py-4 text-center text-sm">24/7 Phone</td>
+          </tr>
+          <tr>
+            <td className="px-6 py-4 text-sm text-gray-700">API Access</td>
+            <td className="px-6 py-4 text-center text-sm"><span className="text-red-500">✗</span></td>
+            <td className="px-6 py-4 text-center text-sm bg-blue-50"><span className="text-green-500 text-xl">✓</span></td>
+            <td className="px-6 py-4 text-center text-sm"><span className="text-green-500 text-xl">✓</span></td>
+          </tr>
+          <tr>
+            <td className="px-6 py-4 text-sm text-gray-700">Custom Branding</td>
+            <td className="px-6 py-4 text-center text-sm"><span className="text-red-500">✗</span></td>
+            <td className="px-6 py-4 text-center text-sm bg-blue-50"><span className="text-green-500 text-xl">✓</span></td>
+            <td className="px-6 py-4 text-center text-sm"><span className="text-green-500 text-xl">✓</span></td>
+          </tr>
+          <tr>
+            <td className="px-6 py-4 text-sm text-gray-700">Dedicated Manager</td>
+            <td className="px-6 py-4 text-center text-sm"><span className="text-red-500">✗</span></td>
+            <td className="px-6 py-4 text-center text-sm bg-blue-50"><span className="text-red-500">✗</span></td>
+            <td className="px-6 py-4 text-center text-sm"><span className="text-green-500 text-xl">✓</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div >
+
+{/* FAQ Section */ }
+< div className="max-w-4xl mx-auto mb-16" >
+  <h3 className="text-2xl font-bold text-center mb-8">Frequently Asked Questions</h3>
+  <div className="grid md:grid-cols-2 gap-6">
+    <div className="bg-white rounded-lg shadow-md p-6">
+      <h4 className="font-semibold text-gray-900 mb-2">Can I change plans later?</h4>
+      <p className="text-sm text-gray-600">
+        Yes! You can upgrade or downgrade anytime. Changes take effect immediately, and we'll
+        prorate any charges.
+      </p>
+    </div>
+    <div className="bg-white rounded-lg shadow-md p-6">
+      <h4 className="font-semibold text-gray-900 mb-2">What payment methods do you accept?</h4>
+      <p className="text-sm text-gray-600">
+        We accept credit cards, bank transfers, and crypto payments (USDC, ALGO). All transactions
+        are secure and encrypted.
+      </p>
+    </div>
+    <div className="bg-white rounded-lg shadow-md p-6">
+      <h4 className="font-semibold text-gray-900 mb-2">Is there a setup fee?</h4>
+      <p className="text-sm text-gray-600">
+        No setup fees on any plan. What you see is what you pay. Enterprise clients may have
+        custom onboarding included.
+      </p>
+    </div>
+    <div className="bg-white rounded-lg shadow-md p-6">
+      <h4 className="font-semibold text-gray-900 mb-2">What's included in the free trial?</h4>
+      <p className="text-sm text-gray-600">
+        14-day free trial with full access to your chosen plan's features. No credit card required
+        to start. Cancel anytime.
+      </p>
+    </div>
+  </div>
+</div >
+
+{/* Trust Badges */ }
+< div className="flex flex-wrap items-center justify-center gap-8 max-w-4xl mx-auto" >
+  <div className="flex items-center gap-2 text-gray-600">
+    <span className="text-2xl">💳</span>
+    <span className="text-sm font-medium">Secure Payment</span>
+  </div>
+  <div className="flex items-center gap-2 text-gray-600">
+    <span className="text-2xl">🔒</span>
+    <span className="text-sm font-medium">SOC 2 Certified</span>
+  </div>
+  <div className="flex items-center gap-2 text-gray-600">
+    <span className="text-2xl">✅</span>
+    <span className="text-sm font-medium">GDPR Compliant</span>
+  </div>
+  <div className="flex items-center gap-2 text-gray-600">
+    <span className="text-2xl">🌐</span>
+    <span className="text-sm font-medium">Global Coverage</span>
+  </div>
+</div >
+function SimplePricingSection() {
+  return (
+    <section className="py-20 bg-gray-100">
+      <div className="container mx-auto px-4">
+        <div className="mx-auto max-w-3xl text-center mb-12">
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">Choose Your Plan</h2>
+          <p className="text-lg text-gray-600">Simple, transparent pricing for businesses of all sizes</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          {/* Starter Plan */}
+          <div className="bg-white border-2 border-gray-300 rounded-2xl p-8 flex flex-col">
+            <div className="text-center mb-6">
+              <div className="text-5xl mb-3">🌱</div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Starter</h3>
+              <p className="text-sm text-gray-600">Perfect for small businesses</p>
+            </div>
+            <div className="text-center mb-8">
+              <div className="text-5xl font-bold text-gray-900 mb-2">$99</div>
+              <div className="text-gray-600 text-sm">per month</div>
+            </div>
+            <ul className="space-y-3 mb-8 flex-grow">
+              <li className="flex items-center gap-2"><span className="text-green-500">✓</span><span className="text-sm">Up to 10 Bills of Lading/month</span></li>
+              <li className="flex items-center gap-2"><span className="text-green-500">✓</span><span className="text-sm">Basic marketplace access</span></li>
+              <li className="flex items-center gap-2"><span className="text-green-500">✓</span><span className="text-sm">1 user account</span></li>
+              <li className="flex items-center gap-2"><span className="text-green-500">✓</span><span className="text-sm">Email support</span></li>
+            </ul>
+            <button className="bg-gray-600 hover:bg-gray-700 text-white px-8 py-3 rounded-lg font-medium w-full">Start Free Trial</button>
+          </div>
+
+          {/* Professional Plan */}
+          <div className="bg-blue-50 border-4 border-blue-500 rounded-2xl p-8 flex flex-col relative scale-105">
+            <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+              <span className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-1 rounded-full text-sm font-bold">⭐ POPULAR</span>
+            </div>
+            <div className="text-center mb-6">
+              <div className="text-5xl mb-3">🚀</div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Professional</h3>
+              <p className="text-sm text-gray-600">For growing businesses</p>
+            </div>
+            <div className="text-center mb-8">
+              <div className="text-5xl font-bold text-gray-900 mb-2">$499</div>
+              <div className="text-gray-600 text-sm">per month</div>
+            </div>
+            <ul className="space-y-3 mb-8 flex-grow">
+              <li className="flex items-center gap-2"><span className="text-green-500">✓</span><span className="text-sm">Unlimited Bills of Lading</span></li>
+              <li className="flex items-center gap-2"><span className="text-green-500">✓</span><span className="text-sm">Full marketplace access</span></li>
+              <li className="flex items-center gap-2"><span className="text-green-500">✓</span><span className="text-sm">Up to 10 user accounts</span></li>
+              <li className="flex items-center gap-2"><span className="text-green-500">✓</span><span className="text-sm">Priority support</span></li>
+              <li className="flex items-center gap-2"><span className="text-green-500">✓</span><span className="text-sm">Advanced analytics</span></li>
+              <li className="flex items-center gap-2"><span className="text-green-500">✓</span><span className="text-sm">API access</span></li>
+            </ul>
+            <button className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-medium w-full">Start 14-Day Trial</button>
+          </div>
+
+          {/* Enterprise Plan */}
+          <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border-2 border-purple-300 rounded-2xl p-8 flex flex-col">
+            <div className="text-center mb-6">
+              <div className="text-5xl mb-3">🏢</div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Enterprise</h3>
+              <p className="text-sm text-gray-600">Custom solutions</p>
+            </div>
+            <div className="text-center mb-8">
+              <div className="text-5xl font-bold text-gray-900 mb-2">Custom</div>
+              <div className="text-gray-600 text-sm">Contact us</div>
+            </div>
+            <ul className="space-y-3 mb-8 flex-grow">
+              <li className="flex items-center gap-2"><span className="text-green-500">✓</span><span className="text-sm">Everything in Professional</span></li>
+              <li className="flex items-center gap-2"><span className="text-green-500">✓</span><span className="text-sm">Unlimited users & BLs</span></li>
+              <li className="flex items-center gap-2"><span className="text-green-500">✓</span><span className="text-sm">Dedicated account manager</span></li>
+              <li className="flex items-center gap-2"><span className="text-green-500">✓</span><span className="text-sm">24/7 phone support</span></li>
+              <li className="flex items-center gap-2"><span className="text-green-500">✓</span><span className="text-sm">Custom integrations</span></li>
+              <li className="flex items-center gap-2"><span className="text-green-500">✓</span><span className="text-sm">White-label solution</span></li>
+            </ul>
+            <button className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 rounded-lg font-medium w-full">Contact Sales</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function CTASection() {
+  return (
+    <div className="py-20 bg-gradient-to-r from-blue-600 to-indigo-700">
+      <div className="container mx-auto px-4">
+        <div className="max-w-4xl mx-auto text-center">
+          {/* Main Heading */}
+          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+            Ready to Accelerate Your Business?
+          </h2>
+
+          {/* Subheading */}
+          <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
+            Join 500+ businesses transforming their trade finance operations with blockchain technology.
+            Get paid instantly instead of 90 days.
+          </p>
+
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+            <button className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-4 rounded-lg font-bold text-lg transition-colors shadow-lg">
+              Get Started Free →
+            </button>
+            <button className="border-2 border-white text-white hover:bg-white hover:text-blue-600 px-8 py-4 rounded-lg font-bold text-lg transition-colors">
+              Schedule a Demo
+            </button>
+          </div>
+
+          {/* Trust Indicators */}
+          <div className="flex flex-wrap justify-center gap-6 text-blue-100 text-sm mb-8">
+            <span className="flex items-center gap-2">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              No credit card required
+            </span>
+            <span className="flex items-center gap-2">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              14-day free trial
+            </span>
+            <span className="flex items-center gap-2">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              Setup in 5 minutes
+            </span>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-8 border-t border-blue-400">
+            {/* <div className="text-center">
+              <div className="text-3xl font-bold text-white mb-2">$45M+</div>
+              <div className="text-blue-200 text-sm">Trade Volume Processed</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-white mb-2">500+</div>
+              <div className="text-blue-200 text-sm">Active Users</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-white mb-2">40+</div>
+              <div className="text-blue-200 text-sm">Countries Worldwide</div>
+            </div> */}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+function FooterSection() { return <footer className="border-t bg-gray-100"><div className="container mx-auto py-12 px-4 text-center"><p>&copy; 2025 Algo Titans</p></div></footer>; }
 
 function AboutSection() {
   return (
