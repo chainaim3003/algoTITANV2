@@ -148,7 +148,7 @@ export default function EnhancedHome() {
         <div className="container mx-auto px-4 py-16">
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-5xl font-bold text-gray-900 mb-6">
-              Welcome to <span className={`${isLocalNet ? 'text-red-600' : 'text-blue-600'}`}>Algo <span style={{letterSpacing: '0.3em'}}>TITAN</span></span>
+              Welcome to <span className={`${isLocalNet ? 'text-red-600' : 'text-blue-600'}`}>Legent <span style={{ letterSpacing: '0.3em' }}>TITAN</span></span>
             </h1>
             <p className="text-xl text-gray-600 mb-8">
               Revolutionary RWA Tokenization with Enhanced Bills of Lading
@@ -234,7 +234,7 @@ export default function EnhancedHome() {
             <div className="flex items-center mb-2">
               {/* Left: Title */}
               <h1 className="text-2xl font-bold text-gray-900 mr-8">
-                Algo TITAN
+                Legent TITAN
               </h1>
 
               {/* Center: Main Navigation */}
@@ -249,15 +249,7 @@ export default function EnhancedHome() {
                   >
                     🏠 Home
                   </button>
-                  <button
-                    onClick={() => handleTabSwitch('marketplace')}
-                    className={`px-4 py-2.5 rounded-md text-base font-medium transition-colors ${activeTab === 'marketplace'
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'text-gray-500 hover:text-gray-700'
-                      }`}
-                  >
-                    🏬 Marketplace
-                  </button>
+
                   <button
                     onClick={() => handleTabSwitch('escrow-marketplace')}
                     className={`px-4 py-2.5 rounded-md text-base font-medium transition-colors ${activeTab === 'escrow-marketplace'
@@ -265,195 +257,40 @@ export default function EnhancedHome() {
                       : 'text-gray-500 hover:text-gray-700'
                       }`}
                   >
-                    💰 Marketplace&EscrowV5
+                    💰 Marketplace
                   </button>
+                  
                   <button
-                    onClick={() => handleTabSwitch('admin')}
-                    className={`px-4 py-2.5 rounded-md text-base font-medium transition-colors ${activeTab === 'admin'
-                      ? 'bg-red-100 text-red-700'
-                      : 'text-gray-500 hover:text-gray-700'
-                      }`}
-                  >
-                    ⚙️ Admin
-                  </button>
-                  <button
-                    onClick={() => handleTabSwitch('about')}
-                    className={`px-4 py-2.5 rounded-md text-base font-medium transition-colors ${activeTab === 'about'
+                    onClick={() => handleTabSwitch('exporter')}
+                    className={`px-4 py-2.5 rounded-md text-base font-medium transition-colors ${activeTab === 'exporter'
                       ? 'bg-blue-100 text-blue-700'
                       : 'text-gray-500 hover:text-gray-700'
                       }`}
                   >
-                    ℹ️ About
+                    📦 Exporter
+                  </button>
+
+                  <button
+                    onClick={() => handleTabSwitch('importer')}
+                    className={`px-4 py-2.5 rounded-md text-base font-medium transition-colors ${activeTab === 'importer'
+                      ? 'bg-green-100 text-green-700'
+                      : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                  >
+                    🏪 Importer
                   </button>
                 </div>
               </div>
 
-              {/* Right: Account Info + Wallet Button */}
+              {/* Right: Account Info */}
               <div className="flex items-center space-x-4">
                 <div className="text-xs text-gray-600">
                   Network: {algoConfig.network}
                 </div>
-                {/* SIMPLIFIED: Removed UniversalRoleSwitcher - tabs are sufficient for role switching */}
-                <SmartWalletButton />
               </div>
             </div>
 
-            {/* Second Row - Role-Based Navigation */}
-            <div className="flex justify-center space-x-2 mb-2">
-              <button
-                onClick={() => handleTabSwitch('exporter')}
-                className={`px-4 py-2.5 rounded-md text-base font-medium transition-colors ${activeTab === 'exporter'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-gray-500 hover:text-gray-700'
-                  }`}
-              >
-                📦 Exporter
-              </button>
-              <button
-                onClick={() => handleTabSwitch('carrier')}
-                className={`px-4 py-2.5 rounded-md text-base font-medium transition-colors ${activeTab === 'carrier'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-gray-500 hover:text-gray-700'
-                  }`}
-              >
-                🚢 Carrier
-              </button>
-
-              <button
-                onClick={() => handleTabSwitch('importer')}
-                className={`px-4 py-2.5 rounded-md text-base font-medium transition-colors ${activeTab === 'importer'
-                  ? 'bg-green-100 text-green-700'
-                  : 'text-gray-500 hover:text-gray-700'
-                  }`}
-              >
-                🏪 Importer
-              </button>
-
-              <button
-                onClick={() => handleTabSwitch('financier')}
-                className={`px-4 py-2.5 rounded-md text-base font-medium transition-colors ${activeTab === 'financier'
-                  ? 'bg-purple-100 text-purple-700'
-                  : 'text-gray-500 hover:text-gray-700'
-                  }`}
-              >
-                💰 Financier
-              </button>
-
-              <button
-                onClick={() => handleTabSwitch('regulator')}
-                className={`px-4 py-2.5 rounded-md text-base font-medium transition-colors ${activeTab === 'regulator'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-gray-500 hover:text-gray-700'
-                  }`}
-              >
-                🏛️ Regulator
-              </button>
-            </div>
-
-            {/* Third Row - Sub-roles for Importer and Financier (only show when relevant tab is active) */}
-            {(activeTab === 'importer' || activeTab === 'financier') && (
-              <div className="flex justify-center space-x-6">
-                {/* Importer sub-roles - only show when importer tab is active */}
-                {activeTab === 'importer' && (
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm font-medium text-gray-600">🏪 Importer:</span>
-                    <button
-                      onClick={() => handleBuyerSelection('BUYER_1')}
-                      className={`px-2 py-1 rounded text-xs font-medium transition-colors ${selectedBuyer === 'BUYER_1'
-                        ? 'bg-green-100 text-green-700'
-                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                        }`}
-                    >
-                      Buyer 1
-                    </button>
-                    <button
-                      onClick={() => handleBuyerSelection('BUYER_2')}
-                      className={`px-2 py-1 rounded text-xs font-medium transition-colors ${selectedBuyer === 'BUYER_2'
-                        ? 'bg-green-100 text-green-700'
-                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                        }`}
-                    >
-                      Buyer 2
-                    </button>
-                  </div>
-                )}
-
-                {/* Financier sub-roles - only show when financier tab is active */}
-                {activeTab === 'financier' && (
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm font-medium text-gray-600">💰 Financier:</span>
-                    <div className="flex items-center space-x-1">
-                      <span className="text-xs text-gray-500">Large:</span>
-                      <button
-                        onClick={() => handleInvestorSelection('INVESTOR_LARGE_1')}
-                        className={`px-2 py-1 rounded text-xs font-medium transition-colors ${selectedInvestor === 'INVESTOR_LARGE_1'
-                          ? 'bg-purple-100 text-purple-700'
-                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                          }`}
-                      >
-                        1
-                      </button>
-                      <button
-                        onClick={() => handleInvestorSelection('INVESTOR_LARGE_2')}
-                        className={`px-2 py-1 rounded text-xs font-medium transition-colors ${selectedInvestor === 'INVESTOR_LARGE_2'
-                          ? 'bg-purple-100 text-purple-700'
-                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                          }`}
-                      >
-                        2
-                      </button>
-                      <span className="text-sm text-gray-400 mx-3 font-bold">|</span>
-                      <span className="text-xs text-gray-500">Small:</span>
-                      <button
-                        onClick={() => handleInvestorSelection('INVESTOR_SMALL_1')}
-                        className={`px-2 py-1 rounded text-xs font-medium transition-colors ${selectedInvestor === 'INVESTOR_SMALL_1'
-                          ? 'bg-purple-100 text-purple-700'
-                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                          }`}
-                      >
-                        1
-                      </button>
-                      <button
-                        onClick={() => handleInvestorSelection('INVESTOR_SMALL_2')}
-                        className={`px-2 py-1 rounded text-xs font-medium transition-colors ${selectedInvestor === 'INVESTOR_SMALL_2'
-                          ? 'bg-purple-100 text-purple-700'
-                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                          }`}
-                      >
-                        2
-                      </button>
-                      <button
-                        onClick={() => handleInvestorSelection('INVESTOR_SMALL_3')}
-                        className={`px-2 py-1 rounded text-xs font-medium transition-colors ${selectedInvestor === 'INVESTOR_SMALL_3'
-                          ? 'bg-purple-100 text-purple-700'
-                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                          }`}
-                      >
-                        3
-                      </button>
-                      <button
-                        onClick={() => handleInvestorSelection('INVESTOR_SMALL_4')}
-                        className={`px-2 py-1 rounded text-xs font-medium transition-colors ${selectedInvestor === 'INVESTOR_SMALL_4'
-                          ? 'bg-purple-100 text-purple-700'
-                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                          }`}
-                      >
-                        4
-                      </button>
-                      <button
-                        onClick={() => handleInvestorSelection('INVESTOR_SMALL_5')}
-                        className={`px-2 py-1 rounded text-xs font-medium transition-colors ${selectedInvestor === 'INVESTOR_SMALL_5'
-                          ? 'bg-purple-100 text-purple-700'
-                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                          }`}
-                      >
-                        5
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+            {/* Second Row - Removed buyer selection tabs, always uses BUYER_1 */}
           </div>
         </div>
       </nav>
@@ -594,7 +431,7 @@ function HomeSection() {
               Powered by Algorand • Fully Regulated
             </div>
             <h1 className="text-4xl font-bold tracking-tight sm:text-6xl lg:text-7xl text-balance mx-auto">
-              <span className="text-blue-600">Algo <span style={{letterSpacing: '0.3em'}}>TITAN</span></span>
+              <span className="text-blue-600">Legent <span style={{ letterSpacing: '0.3em' }}>TITAN</span></span>
             </h1>
             <h2 className="text-xl sm:text-2xl text-gray-600 mt-4 mb-8">
               <span className="text-2xl sm:text-3xl lg:text-4xl font-medium text-gray-600 block mt-2">
@@ -1006,9 +843,9 @@ function PainPointsSection() {
     <section className="py-20 bg-gray-100">
       <div className="container mx-auto px-4">
         <div className="mx-auto max-w-2xl text-center mb-16">
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Why MSMEs Choose Algo Titans</h2>
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Why MSMEs Choose Legent TITAN</h2>
           <p className="mt-4 text-lg text-gray-600">
-            Traditional trade finance is slow, expensive, and excludes small businesses. Algo Titans changes everything with DLT and stablecoins.
+            Traditional trade finance is slow, expensive, and excludes small businesses. Legent TITAN changes everything with DLT and stablecoins.
           </p>
         </div>
 
@@ -1093,7 +930,7 @@ function TestimonialsSection() {
       avatar: "GV",
       avatarBg: "bg-blue-500",
       rating: 5,
-      quote: "Algo Titans transformed our working capital cycle from 90 days to instant settlements. We tokenized our bills of lading and got instant liquidity from global investors. Game-changer for Indian MSMEs!",
+      quote: "Legent TITAN transformed our working capital cycle from 90 days to instant settlements. We tokenized our bills of lading and got instant liquidity from global investors. Game-changer for Indian MSMEs!",
       metric: "90 days → Instant settlement",
       industry: "Textiles"
     },
@@ -1143,13 +980,13 @@ function TestimonialsSection() {
             >
               {/* Header with Avatar and Info */}
               <div className="flex items-start gap-4 mb-4">
-                <div className={`${testimonial.avatarBg} rounded-full h-14 w-14 flex items-center justify-center text-white font-bold text-lg flex-shrink-0`}>
+                <div className={`${testimonial.avatarBg} rounded-full h-16 w-16 flex items-center justify-center text-white font-bold text-lg flex-shrink-0`}>
                   {testimonial.avatar}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-gray-900 text-lg truncate">{testimonial.name}</h4>
-                  <p className="text-sm text-gray-600 truncate">{testimonial.role}</p>
-                  <p className="text-xs text-gray-500 truncate">{testimonial.company}</p>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-gray-900 text-lg">{testimonial.name}</h4>
+                  <p className="text-sm text-gray-600">{testimonial.role}</p>
+                  <p className="text-xs text-gray-500">{testimonial.company}</p>
                 </div>
               </div>
 
@@ -1163,7 +1000,7 @@ function TestimonialsSection() {
               </div>
 
               {/* Quote */}
-              <blockquote className="text-gray-700 text-sm leading-relaxed mb-4 flex-grow">
+              <blockquote className="text-gray-700 text-base leading-relaxed mb-6 flex-grow">
                 "{testimonial.quote}"
               </blockquote>
 
@@ -1325,7 +1162,7 @@ function UserTypesSection() {
             Built for Every Trade Participant
           </h2>
           <p className="text-lg text-gray-600">
-            Whether you're an exporter, importer, carrier, investor, or regulator - Algo Titans has
+            Whether you're an exporter, importer, carrier, investor, or regulator - Legent TITAN has
             powerful solutions tailored to your specific needs in the global trade ecosystem.
           </p>
         </div>
@@ -1395,7 +1232,7 @@ function UserTypesSection() {
         {/* Additional Context */}
         <div className="mt-12 text-center max-w-3xl mx-auto">
           <p className="text-gray-600 text-sm leading-relaxed">
-            Algo Titans brings together all participants in the international trade value chain onto a
+            Legent TITAN brings together all participants in the international trade value chain onto a
             single blockchain-powered platform. With smart contracts, RWA tokenization, and
             stablecoin settlements, we're making global trade faster, cheaper, and more accessible for everyone.
           </p>
@@ -1555,13 +1392,13 @@ function CTASection() {
   );
 }
 
-function FooterSection() { return <footer className="border-t bg-gray-100"><div className="container mx-auto py-12 px-4 text-center"><p>&copy; 2024 Algo <span style={{letterSpacing: '0.3em'}}>TITAN</span></p></div></footer>; }
+function FooterSection() { return <footer className="border-t bg-gray-100"><div className="container mx-auto py-12 px-4 text-center"><p>&copy; 2024 Legent <span style={{ letterSpacing: '0.3em' }}>TITAN</span></p></div></footer>; }
 
 function AboutSection() {
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-8">
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">About Algo <span style={{letterSpacing: '0.3em'}}>TITAN</span></h1>
+        <h1 className="text-4xl font-bold text-gray-900 mb-4">About Legent <span style={{ letterSpacing: '0.3em' }}>TITAN</span></h1>
         <p className="text-xl text-gray-600">Revolutionary RWA Tokenization Platform for Trade Finance</p>
       </div>
       <div className="bg-white p-6 rounded-lg shadow">

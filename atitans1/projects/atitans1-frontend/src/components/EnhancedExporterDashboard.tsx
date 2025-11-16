@@ -54,7 +54,7 @@ export function EnhancedExporterDashboard() {
   const { activeRole, isCurrentlyExporter, availableRoles } = useApplicationState()
   const { switchToAddress } = useRoleSwitcher()
   const [rwaAssets, setRWAAssets] = useState<RWAAsset[]>([])
-  const [escrowedTrades, setEscrowedTrades] = useState<any[]>([])
+  const [sellerTrades, setSellerTrades] = useState<any[]>([])
   const [pendingAssets, setPendingAssets] = useState<any[]>([]) // NEW: Pending assets awaiting opt-in
   const [loading, setLoading] = useState(true)
   const [optingIn, setOptingIn] = useState<number | null>(null) // Track which asset is being opted into
@@ -68,27 +68,31 @@ export function EnhancedExporterDashboard() {
   const [viewingBoxStorage, setViewingBoxStorage] = useState<number | null>(null) // Track which trade's box storage is being viewed
 
   const exporterAddress = ADDRESSES.EXPORTER
-  const isConnectedAsExporter = activeAddress === exporterAddress
+  // Use exporter address as default if no wallet connected (demo mode)
+  const effectiveAddress = activeAddress || exporterAddress
+  const isConnectedAsExporter = effectiveAddress === exporterAddress
 
   useEffect(() => {
     console.log('🚀 EnhancedExporterDashboard useEffect triggered with activeAddress:', activeAddress)
+    console.log('🚀 effectiveAddress:', effectiveAddress)
     console.log('🚀 exporterAddress:', exporterAddress) 
     console.log('🚀 isConnectedAsExporter:', isConnectedAsExporter)
     loadExporterRWAs()
-  }, [activeAddress])
+  }, [activeAddress, effectiveAddress])
 
   const loadExporterRWAs = async () => {
-    console.log('🎯 loadExporterRWAs function called - activeAddress:', activeAddress)
+    console.log('🎯 loadExporterRWAs function called - effectiveAddress:', effectiveAddress)
     
-    if (!activeAddress) {
-      console.log('📍 Enhanced Exporter Dashboard: No active address, skipping data load')
+    // Always use effectiveAddress (fallback to exporter if no wallet connected)
+    if (!effectiveAddress) {
+      console.log('📍 Enhanced Exporter Dashboard: No effective address, skipping data load')
       setLoading(false)
       return
     }
 
     try {
       setLoading(true)
-      console.log('🔍 Loading RWA assets for exporter:', activeAddress)
+      console.log('🔍 Loading RWA assets for exporter:', effectiveAddress)
       
       // 📦 STEP 1: Load BLs from Box Storage
       console.log('📦 Loading BLs from box storage...')
@@ -108,13 +112,13 @@ export function EnhancedExporterDashboard() {
       // 📊 STEP 2: Filter BLs owned by this exporter
       const ownedBLs = allBLs.filter(bl => {
         const hasAsset = bl.rwaTokenization?.assetId !== undefined;
-        const isOwned = bl.currentHolder === activeAddress;
+        const isOwned = bl.currentHolder === effectiveAddress;
         
         console.log(`Checking BL ${bl.transportDocumentReference} for ownership:`, {
           hasAsset,
           assetId: bl.rwaTokenization?.assetId,
           currentHolder: bl.currentHolder,
-          activeAddress,
+          effectiveAddress,
           isOwned,
           status: bl.status
         });
@@ -127,8 +131,8 @@ export function EnhancedExporterDashboard() {
       
       // 📋 STEP 3: Filter pending assets (assigned but not yet owned)
       const pending = allBLs.filter(bl => {
-        const assigned = bl.createdByCarrier?.assignedToExporter === activeAddress;
-        const notOwned = bl.currentHolder !== activeAddress;
+        const assigned = bl.createdByCarrier?.assignedToExporter === effectiveAddress;
+        const notOwned = bl.currentHolder !== effectiveAddress;
         const hasAsset = bl.rwaTokenization?.assetId !== undefined;
         
         console.log(`Checking BL ${bl.transportDocumentReference} for pending:`, {
@@ -177,16 +181,40 @@ export function EnhancedExporterDashboard() {
       setRWAAssets(rwaAssets)
       
       // 💰 STEP 5: Load trades from V5 Escrow where this exporter is the seller
-      console.log('💰 Loading V5 Escrow trades for seller:', activeAddress)
+      // IMPORTANT: Only show trades where the current user is the seller - no other users' trades
+      console.log('💰 Loading V5 Escrow trades for seller:', effectiveAddress)
+      console.log('📊 Exporter address from ADDRESSES:', exporterAddress)
+      console.log('🔍 Active address from wallet:', activeAddress)
       try {
         const allTrades = await escrowV4BoxReader.getAllTrades()
+        console.log(`📦 Total trades from V5 Escrow: ${allTrades.length}`)
         
-        // Filter for trades where seller is this exporter AND state is ESCROWED (1)
-        const sellerEscrowedTrades = allTrades
-          .filter(({ trade }) => 
-            trade.seller === activeAddress && 
-            trade.state === 1 // ESCROWED state
-          )
+        // Log all trades to see what's available
+        allTrades.forEach(({ trade }, index) => {
+          console.log(`Trade #${index + 1}:`, {
+            tradeId: trade.tradeId,
+            seller: trade.seller,
+            buyer: trade.buyer,
+            state: trade.state,
+            amount: trade.amount,
+            matchesEffective: trade.seller === effectiveAddress,
+            matchesExporter: trade.seller === exporterAddress
+          })
+        })
+        
+        // Filter for trades where seller is EXACTLY this exporter (ALL STATES)
+        // This ensures ONLY the current user's trades are shown - never other users' trades
+        const sellerTrades = allTrades
+          .filter(({ trade }) => {
+            const isMySeller = trade.seller === effectiveAddress
+            if (!isMySeller) {
+              console.log(`🚫 Filtering out trade ${trade.tradeId} - seller mismatch:`, {
+                tradeSeller: trade.seller,
+                myAddress: effectiveAddress
+              })
+            }
+            return isMySeller
+          })
           .map(({ trade, metadata }) => ({
             ...trade,
             productType: metadata.productType,
@@ -194,11 +222,13 @@ export function EnhancedExporterDashboard() {
             ipfsHash: metadata.ipfsHash
           }))
         
-        console.log(`✅ Found ${sellerEscrowedTrades.length} escrowed trades ready for execution`)
-        setEscrowedTrades(sellerEscrowedTrades)
+        console.log(`✅ Found ${sellerTrades.length} trades where YOU are the seller (showing ONLY your trades)`)
+        console.log(`🔒 Filtered out ${allTrades.length - sellerTrades.length} trades from other users`)
+        console.log('📋 Your trades:', sellerTrades.map(t => ({ id: t.tradeId, state: t.state, seller: t.seller })))
+        setSellerTrades(sellerTrades)
       } catch (escrowError) {
         console.error('❌ Error loading V5 Escrow trades:', escrowError)
-        setEscrowedTrades([])
+        setSellerTrades([])
       }
       
       // 📊 Show box storage stats
@@ -577,6 +607,29 @@ export function EnhancedExporterDashboard() {
     }
   }
 
+  const handleSendInvoice = async (tradeId: number) => {
+    // Trigger the invoice upload input
+    const fileInput = document.getElementById(`invoice-upload-${tradeId}`) as HTMLInputElement
+    if (fileInput) {
+      fileInput.click()
+    }
+  }
+
+  const getTradeStateInfo = (state: number): { label: string; color: string; bgColor: string } => {
+    switch (state) {
+      case 0:
+        return { label: 'CREATED', color: 'text-blue-800', bgColor: 'bg-blue-100 border-blue-300' }
+      case 1:
+        return { label: 'ESCROWED', color: 'text-green-800', bgColor: 'bg-green-100 border-green-300' }
+      case 2:
+        return { label: 'COMPLETED', color: 'text-gray-800', bgColor: 'bg-gray-100 border-gray-300' }
+      case 3:
+        return { label: 'CANCELLED', color: 'text-red-800', bgColor: 'bg-red-100 border-red-300' }
+      default:
+        return { label: 'UNKNOWN', color: 'text-gray-800', bgColor: 'bg-gray-100 border-gray-300' }
+    }
+  }
+
   const handleOpenWalletGuide = () => {
     // Show detailed guide modal
     const modal = document.createElement('div')
@@ -834,80 +887,29 @@ export function EnhancedExporterDashboard() {
           </div>
         </div>
         
-        {/* Connection Status */}
-        {!isConnectedAsExporter ? (
-          <div className="bg-orange-100 border border-orange-300 text-orange-800 p-4 rounded-lg mb-6">
-            <div className="flex items-center gap-2 mb-2">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
-              <span className="font-medium">Switch to Exporter Account Required</span>
-            </div>
-            <div className="text-sm mb-3">
-              Please connect to the Exporter wallet address to manage your RWA assets:
-            </div>
-            <div className="text-xs font-mono bg-white px-2 py-1 rounded border mb-3">
-              {exporterAddress}
-            </div>
-            <div className="text-sm mb-4">
-              Currently connected: {activeAddress ? `${formatAddress(activeAddress)} (${activeRole?.shortName})` : 'No wallet connected'}
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => handleSwitchToExporter()}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                </svg>
-                Switch to Exporter Wallet
-              </button>
-              <button
-                onClick={() => handleOpenWalletGuide()}
-                className="border border-blue-600 text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg font-medium flex items-center gap-2"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                How to Switch?
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="bg-green-100 border border-green-300 text-green-800 p-4 rounded-lg mb-6">
-            <div className="flex items-center gap-2 mb-2">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-              </svg>
-              <span className="font-medium">✅ Connected as Exporter</span>
-            </div>
-            <div className="text-sm">
-              You can now manage your RWA assets, list them for sale, or open them for fractional investment.
-            </div>
-          </div>
-        )}  
+        {/* Connection Status - Removed, always show data in demo mode */}  
       </div>
 
       {/* Tab Navigation */}
       <div className="mb-8 border-b border-gray-200">
         <nav className="-mb-px flex space-x-8">
           <button
-            onClick={() => setActiveTab('marketplace')}
-            className={`
-              py-4 px-1 border-b-2 font-medium text-sm transition-colors
-              ${
-                activeTab === 'marketplace'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }
-            `}
+          onClick={() => setActiveTab('marketplace')}
+          className={`
+          py-4 px-1 border-b-2 font-medium text-sm transition-colors
+          ${
+          activeTab === 'marketplace'
+          ? 'border-blue-500 text-blue-600'
+          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+          }
+          `}
           >
-            🏪 Marketplace
-            {escrowedTrades.length > 0 && (
-              <span className="ml-2 bg-green-100 text-green-800 py-0.5 px-2 rounded-full text-xs font-semibold">
-                {escrowedTrades.length}
-              </span>
-            )}
+          🏪 Marketplace
+          {sellerTrades.length > 0 && (
+          <span className="ml-2 bg-green-100 text-green-800 py-0.5 px-2 rounded-full text-xs font-semibold">
+          {sellerTrades.length}
+          </span>
+          )}
           </button>
           <button
             onClick={() => setActiveTab('myrwas')}
@@ -933,40 +935,62 @@ export function EnhancedExporterDashboard() {
       {/* Marketplace Tab Content */}
       {activeTab === 'marketplace' && (
         <>
-          {/* Escrowed Trades - Ready for Execution */}
-          {escrowedTrades.length > 0 ? (
+          {/* IMPORTANT: Only showing trades where YOU are the seller - no other users' trades */}
+          {/* All Seller Trades */}
+          {sellerTrades.length > 0 ? (
             <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">
-                    💰 Funded Trades - Ready to Execute
+                    💰 My Marketplace Trades
                   </h2>
                   <p className="text-gray-600 mt-1">
-                    Trades that have been funded and are awaiting your execution
+                    All trades where you are the seller
                   </p>
                 </div>
-                <div className="bg-green-100 text-green-800 px-4 py-2 rounded-lg font-semibold">
-                  {escrowedTrades.length} Ready
+                <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-lg font-semibold">
+                  {sellerTrades.length} {sellerTrades.length === 1 ? 'Trade' : 'Trades'}
                 </div>
               </div>
 
               <div className="grid gap-4">
-                {escrowedTrades.map((trade) => (
-                  <div 
-                    key={trade.tradeId} 
-                    className="border border-green-200 rounded-lg p-6 bg-gradient-to-r from-green-50 to-emerald-50 hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-3">
-                          <h3 className="text-xl font-bold text-gray-900">
-                            Trade #{trade.tradeId}
-                          </h3>
-                          <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold border border-green-300">
-                            ✓ ESCROWED - Funded
-                          </span>
-                        </div>
+                {sellerTrades.map((trade) => {
+                  // Double-check: Only display if seller matches current user (defensive programming)
+                  if (trade.seller !== effectiveAddress) {
+                    console.error('🚨 SECURITY: Attempted to display trade from another user!', {
+                      tradeId: trade.tradeId,
+                      tradeSeller: trade.seller,
+                      currentUser: effectiveAddress
+                    })
+                    return null // Do not render trades from other users
+                  }
+                  
+                  const stateInfo = getTradeStateInfo(trade.state)
+                  const isCreated = trade.state === 0 // Awaiting funding
+                  const isEscrowed = trade.state === 1 // Funded, ready to execute
+                  const isCompleted = trade.state === 2 // Trade completed
+                  
+                  return (
+                    <div 
+                      key={trade.tradeId} 
+                      className={`border rounded-lg p-6 hover:shadow-md transition-shadow ${
+                        isEscrowed ? 'border-green-200 bg-gradient-to-r from-green-50 to-emerald-50' :
+                        isCompleted ? 'border-gray-200 bg-gradient-to-r from-gray-50 to-slate-50' :
+                        'border-blue-200 bg-gradient-to-r from-blue-50 to-sky-50'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-3">
+                            <h3 className="text-xl font-bold text-gray-900">
+                              Trade #{trade.tradeId}
+                            </h3>
+                            <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${stateInfo.bgColor} ${stateInfo.color}`}>
+                              {stateInfo.label}
+                            </span>
+                          </div>
                         
+                        {/* Trade Details - Visible for ALL states including CREATED (unfunded) */}
                         <div className="grid grid-cols-2 gap-4 text-sm">
                           <div>
                             <div className="text-gray-600 mb-1">Product</div>
@@ -988,19 +1012,35 @@ export function EnhancedExporterDashboard() {
                           </div>
                           
                           <div>
-                            <div className="text-gray-600 mb-1">Funded By</div>
+                            <div className="text-gray-600 mb-1">{isCreated ? 'Awaiting Funding From' : 'Funded By'}</div>
                             <div className="font-mono text-xs text-gray-700">
                               {trade.escrowProvider.slice(0, 8)}...{trade.escrowProvider.slice(-8)}
                             </div>
                           </div>
                         </div>
                         
+                        {/* Funding Status Alert for CREATED trades */}
+                        {isCreated && (
+                          <div className="mt-3 p-3 bg-yellow-50 rounded border border-yellow-200">
+                            <div className="flex items-center gap-2">
+                              <span className="text-yellow-600 text-lg">⏳</span>
+                              <div className="flex-1">
+                                <div className="text-sm font-semibold text-yellow-800">Awaiting Buyer Funding</div>
+                                <div className="text-xs text-yellow-700 mt-1">
+                                  This trade is visible and created, but the buyer hasn't funded it yet. You can view all details and prepare documents while waiting.
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        
                         <div className="mt-3 p-3 bg-white rounded border border-green-200">
                           <div className="text-xs text-gray-600">Description</div>
                           <div className="text-sm text-gray-800 mt-1">{trade.description}</div>
                         </div>
 
-                        {/* Document Upload Section */}
+                        {/* Document Upload Section - Only for non-completed trades */}
+                        {!isCompleted && (
                         <div className="mt-4 space-y-3">
                           {/* Shipping Instructions Upload */}
                           <div>
@@ -1114,28 +1154,68 @@ export function EnhancedExporterDashboard() {
                             </div>
                           </div>
                         </div>
+                        )}
                       </div>
 
-                      <button
-                        onClick={() => handleExecuteTrade(trade.tradeId)}
-                        className="ml-6 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all flex items-center gap-2"
-                      >
-                        <span>⚡</span>
-                        <span>Execute Trade</span>
-                      </button>
+                      {/* Action Buttons */}
+                      <div className="ml-6 flex flex-col gap-3">
+                        {/* Send Invoice Button */}
+                        {!isCompleted && (
+                        <button
+                          onClick={() => handleSendInvoice(trade.tradeId)}
+                          className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all flex items-center gap-2 whitespace-nowrap"
+                        >
+                          <span>📎</span>
+                          <span>Send Invoice</span>
+                        </button>
+                        )}
+                        
+                        {/* Execute Trade Button - Only for Escrowed trades */}
+                        {isEscrowed && (
+                        <button
+                          onClick={() => handleExecuteTrade(trade.tradeId)}
+                          className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all flex items-center gap-2 whitespace-nowrap"
+                        >
+                          <span>⚡</span>
+                          <span>Execute Trade</span>
+                        </button>
+                        )}
+                        
+                        {/* Completed Badge */}
+                        {isCompleted && (
+                        <div className="px-6 py-3 bg-gray-100 text-gray-600 rounded-lg font-semibold flex items-center gap-2">
+                          <span>✅</span>
+                          <span>Completed</span>
+                        </div>
+                        )}
+                      </div>
                     </div>
                     
-                    {/* Algorand Box Storage Viewer - INLINE */}
-                    <TradeBoxStorageInline tradeId={trade.tradeId} />
-                  </div>
-                ))}
+                      {/* Algorand Box Storage Viewer - INLINE */}
+                      <TradeBoxStorageInline tradeId={trade.tradeId} />
+                    </div>
+                  )
+                })}
               </div>
 
               <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <div className="flex items-start gap-2">
                   <span className="text-blue-600 text-lg">ℹ️</span>
                   <div className="text-sm text-blue-800">
-                    <div className="font-semibold mb-1">What happens when you execute?</div>
+                    <div className="font-semibold mb-1">Trade States Explained</div>
+                    <ul className="list-disc list-inside space-y-1 text-blue-700">
+                      <li><strong>CREATED (Unfunded):</strong> Trade initiated and visible. Buyer hasn't funded yet. You can view all details and prepare documents.</li>
+                      <li><strong>ESCROWED (Funded):</strong> Buyer has funded the trade. Ready for you to execute and receive payment.</li>
+                      <li><strong>COMPLETED:</strong> Trade executed successfully. Funds transferred and assets delivered.</li>
+                    </ul>
+                    <div className="font-semibold mt-3 mb-1">What can you do with CREATED trades?</div>
+                    <ul className="list-disc list-inside space-y-1 text-blue-700">
+                      <li>✅ View all trade details (amount, buyer, product)</li>
+                      <li>✅ Upload commercial invoices and shipping instructions</li>
+                      <li>✅ Access trade box storage</li>
+                      <li>⏳ Wait for buyer to fund before executing</li>
+                    </ul>
+                    <div className="font-semibold mt-3 mb-1">What happens when you execute ESCROWED trades?</div>
                     <ul className="list-disc list-inside space-y-1 text-blue-700">
                       <li>Transfer the instrument NFT to the buyer</li>
                       <li>Pay the regulator tax from your wallet</li>
@@ -1188,7 +1268,7 @@ export function EnhancedExporterDashboard() {
             You don't have any RWA assets yet. Create eBL contracts through the Carrier dashboard to generate RWA assets.
             </p>
             <div className="text-sm text-gray-400 mb-4">
-            Connected Address: {formatAddress(activeAddress || '')}
+            Viewing as: {formatAddress(effectiveAddress)}
             </div>
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
                   <div className="flex items-center gap-2 text-blue-800 mb-2">
