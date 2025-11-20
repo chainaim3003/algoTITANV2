@@ -6,7 +6,7 @@
  * - Marketplace: Universal browsing and purchasing
  * - Importer Dashboard: Shows purchased instruments
  */
-// import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { ExporterDashboard } from '../components/ExporterDashboard'
 import { MarketplacePage } from '../components/MarketplacePage'
 import { ImporterDashboard } from '../components/ImporterDashboard'
