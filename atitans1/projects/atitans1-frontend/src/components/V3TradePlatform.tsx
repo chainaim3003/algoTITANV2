@@ -6,7 +6,7 @@
  * - Marketplace: Universal browsing and purchasing
  * - Importer Dashboard: Shows purchased instruments
  */
-import React, { useState, useEffect } from 'react'
+// import React, { useState, useEffect } from 'react'
 import { ExporterDashboard } from '../components/ExporterDashboard'
 import { MarketplacePage } from '../components/MarketplacePage'
 import { ImporterDashboard } from '../components/ImporterDashboard'
@@ -31,7 +31,7 @@ export const V3TradePlatform: React.FC = () => {
         // The actual implementation depends on your wallet setup
         return [] as (Uint8Array | null)[];
       };
-      
+
       const service = new MarketplaceService(
         contracts.algorand,
         contracts.registry,
@@ -99,51 +99,46 @@ export const V3TradePlatform: React.FC = () => {
               <div className="hidden md:ml-6 md:flex md:space-x-8">
                 <button
                   onClick={() => handlePageChange('marketplace')}
-                  className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                    currentPage === 'marketplace'
+                  className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${currentPage === 'marketplace'
                       ? 'border-blue-500 text-gray-900'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                    }`}
                 >
                   Marketplace
                 </button>
                 <button
                   onClick={() => handlePageChange('lending')}
-                  className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                    currentPage === 'lending'
+                  className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${currentPage === 'lending'
                       ? 'border-blue-500 text-gray-900'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                    }`}
                 >
                   Lending
                 </button>
                 <button
                   onClick={() => handlePageChange('exporter')}
-                  className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                    currentPage === 'exporter'
+                  className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${currentPage === 'exporter'
                       ? 'border-blue-500 text-gray-900'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                    }`}
                 >
                   Exporter
                 </button>
                 <button
                   onClick={() => handlePageChange('importer')}
-                  className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                    currentPage === 'importer'
+                  className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${currentPage === 'importer'
                       ? 'border-blue-500 text-gray-900'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                    }`}
                 >
                   Importer
                 </button>
                 <button
                   onClick={() => handlePageChange('carrier')}
-                  className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                    currentPage === 'carrier'
+                  className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${currentPage === 'carrier'
                       ? 'border-blue-500 text-gray-900'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                    }`}
                 >
                   Carrier
                 </button>
@@ -207,22 +202,22 @@ export const V3TradePlatform: React.FC = () => {
         {currentPage === 'marketplace' && (
           <MarketplacePage marketplaceService={marketplaceService} />
         )}
-        
+
         {currentPage === 'exporter' && (
           <ExporterDashboard marketplaceService={marketplaceService} />
         )}
-        
+
         {currentPage === 'importer' && (
-          <ImporterDashboard 
+          <ImporterDashboard
             marketplaceService={marketplaceService}
             onNavigateToMarketplace={() => handlePageChange('marketplace')}
           />
         )}
-        
+
         {currentPage === 'carrier' && (
           <CarrierDashboard />
         )}
-        
+
         {currentPage === 'lending' && (
           <LendingDashboardContainer />
         )}
@@ -266,8 +261,8 @@ const CarrierDashboard: React.FC = () => {
           </p>
           <div className="bg-blue-50 border border-blue-200 rounded-md p-4 max-w-md mx-auto">
             <p className="text-blue-800 text-sm">
-              <strong>Implementation Note:</strong> The carrier interface for creating eBL instruments 
-              with immediate exporter ownership transfer is ready in the smart contracts but needs 
+              <strong>Implementation Note:</strong> The carrier interface for creating eBL instruments
+              with immediate exporter ownership transfer is ready in the smart contracts but needs
               UI implementation.
             </p>
           </div>
@@ -390,7 +385,7 @@ const LendingDashboard = () => {
           <div className="text-purple-100">Active Loans</div>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-lg shadow-lg">
           <h3 className="text-xl font-semibold mb-4 text-gray-800">How eBL Lending Works</h3>
@@ -433,30 +428,30 @@ const LendingDashboard = () => {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white p-6 rounded-lg shadow-lg">
           <h3 className="text-xl font-semibold mb-4 text-gray-800">Quick Actions</h3>
           <div className="space-y-3">
-            <button 
+            <button
               onClick={() => setActiveTab('request')}
               className="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
             >
               <span>Request a Loan</span>
             </button>
-            <button 
+            <button
               onClick={() => setActiveTab('available')}
               className="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
             >
               <span>Fund Loans</span>
             </button>
-            <button 
+            <button
               onClick={() => setActiveTab('myLoans')}
               className="w-full bg-purple-600 text-white p-3 rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center space-x-2"
             >
               <span>My Loans</span>
             </button>
           </div>
-          
+
           <div className="mt-6 p-4 bg-blue-50 rounded-lg">
             <h4 className="font-medium text-blue-900 mb-2">V3 Features</h4>
             <ul className="text-sm text-blue-700 space-y-1">
@@ -480,10 +475,10 @@ const LendingDashboard = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               eBL Token (Collateral)
             </label>
-            <select 
+            <select
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               value={loanForm.collateralAssetId}
-              onChange={(e) => setLoanForm({...loanForm, collateralAssetId: e.target.value})}
+              onChange={(e) => setLoanForm({ ...loanForm, collateralAssetId: e.target.value })}
             >
               <option value="">Select your eBL token</option>
               <option value="123456">eBL #123456 - Shanghai to LA (Low Risk)</option>
@@ -491,30 +486,30 @@ const LendingDashboard = () => {
               <option value="345678">eBL #345678 - Mumbai to Hamburg (High Risk)</option>
             </select>
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Collateral Value (USD)
             </label>
-            <input 
+            <input
               type="number"
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Enter collateral value"
               value={loanForm.collateralValue}
-              onChange={(e) => setLoanForm({...loanForm, collateralValue: e.target.value})}
+              onChange={(e) => setLoanForm({ ...loanForm, collateralValue: e.target.value })}
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Requested Amount (USDC)
             </label>
-            <input 
+            <input
               type="number"
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Enter loan amount"
               value={loanForm.requestedAmount}
-              onChange={(e) => setLoanForm({...loanForm, requestedAmount: e.target.value})}
+              onChange={(e) => setLoanForm({ ...loanForm, requestedAmount: e.target.value })}
             />
             {loanForm.collateralValue && loanForm.requestedAmount && (
               <div className="mt-2 text-sm text-gray-600">
@@ -525,15 +520,15 @@ const LendingDashboard = () => {
               </div>
             )}
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Loan Duration
             </label>
-            <select 
+            <select
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               value={loanForm.duration}
-              onChange={(e) => setLoanForm({...loanForm, duration: e.target.value})}
+              onChange={(e) => setLoanForm({ ...loanForm, duration: e.target.value })}
             >
               <option value="7">7 Days</option>
               <option value="14">14 Days</option>
@@ -542,7 +537,7 @@ const LendingDashboard = () => {
               <option value="90">90 Days</option>
             </select>
           </div>
-          
+
           <div className="bg-gray-50 p-4 rounded-lg">
             <h4 className="font-medium text-gray-800 mb-2">Estimated Terms</h4>
             <div className="space-y-1 text-sm text-gray-600">
@@ -560,8 +555,8 @@ const LendingDashboard = () => {
               </div>
             </div>
           </div>
-          
-          <button 
+
+          <button
             onClick={handleLoanRequest}
             className="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
             disabled={!loanForm.collateralAssetId || !loanForm.requestedAmount || !loanForm.collateralValue}
@@ -623,11 +618,10 @@ const LendingDashboard = () => {
                 <div>
                   <div className="text-sm text-gray-600">Collateral Asset</div>
                   <div className="font-semibold">{loan.collateral}</div>
-                  <div className={`text-xs px-2 py-1 rounded inline-block mt-1 ${
-                    loan.riskLevel === 'Low' ? 'bg-green-100 text-green-800' :
-                    loan.riskLevel === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-red-100 text-red-800'
-                  }`}>
+                  <div className={`text-xs px-2 py-1 rounded inline-block mt-1 ${loan.riskLevel === 'Low' ? 'bg-green-100 text-green-800' :
+                      loan.riskLevel === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                    }`}>
                     {loan.riskLevel} Risk
                   </div>
                 </div>
@@ -686,9 +680,8 @@ const LendingDashboard = () => {
                     <div className="font-semibold text-lg">${loan.amount.toLocaleString()} USDC</div>
                     <div className="text-sm text-gray-600">{loan.collateral}</div>
                   </div>
-                  <span className={`px-2 py-1 rounded text-sm ${
-                    loan.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
-                  }`}>
+                  <span className={`px-2 py-1 rounded text-sm ${loan.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
+                    }`}>
                     {loan.status}
                   </span>
                 </div>
@@ -696,18 +689,17 @@ const LendingDashboard = () => {
                   <div>Due: {loan.dueDate} ({loan.daysLeft} days left)</div>
                   <div>Repay: ${loan.repaymentAmount.toLocaleString()} USDC</div>
                 </div>
-                <button className={`px-4 py-2 rounded transition-colors text-sm w-full ${
-                  loan.daysLeft <= 5 
-                    ? 'bg-red-600 hover:bg-red-700 text-white' 
+                <button className={`px-4 py-2 rounded transition-colors text-sm w-full ${loan.daysLeft <= 5
+                    ? 'bg-red-600 hover:bg-red-700 text-white'
                     : 'bg-blue-600 hover:bg-blue-700 text-white'
-                }`}>
+                  }`}>
                   {loan.daysLeft <= 5 ? 'Repay Now (Urgent)' : 'Repay Loan'}
                 </button>
               </div>
             ))}
           </div>
         </div>
-        
+
         <div className="bg-white p-6 rounded-lg shadow-lg">
           <h3 className="text-xl font-semibold mb-4 text-gray-800">My Funded Loans</h3>
           <div className="space-y-3">
@@ -752,7 +744,7 @@ const LendingDashboard = () => {
               </div>
             ))}
           </div>
-          
+
           <div className="mt-6 p-4 bg-green-50 rounded-lg">
             <h4 className="font-medium text-green-900 mb-2">Lending Performance</h4>
             <div className="text-sm text-green-700">
@@ -790,11 +782,10 @@ const LendingDashboard = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === tab.id
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === tab.id
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                  }`}
               >
                 {tab.label}
               </button>
